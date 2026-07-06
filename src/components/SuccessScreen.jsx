@@ -1,0 +1,21 @@
+export function SuccessScreen({ rfq, uniqueId }) {
+  return (
+    <div className="page">
+      <div className="card success">
+        <div className="success__check">&#10003;</div>
+        <h1>Quotation Submitted</h1>
+        <p>
+          Thank you{rfq.vendorName ? `, ${rfq.vendorName}` : ""}. Your quotation
+          for <strong>{rfq.product || "the requested item"}</strong> has been
+          received by the AiraTrex Sourcing Desk.
+        </p>
+        <div className="success__ref">
+          <div><span>RFQ #</span><strong>{rfq.rfqNumber || "—"}</strong></div>
+          <div><span>Item</span><strong>{rfq.itemId || "—"}</strong></div>
+          <div><span>Reference</span><strong>{uniqueId || "—"}</strong></div>
+        </div>
+        <p className="muted">You may now close this window.</p>
+      </div>
+    </div>
+  );
+}

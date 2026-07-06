@@ -15,7 +15,8 @@ export function getRfqParams() {
     vendorId: get("vendor_id"),
     vendorName: get("vendor_name"),
     product: get("product"),
-    quantity: get("qty"),
+    // Accept both `qty` (widget/Deluge link) and `quantity` (manual links).
+    quantity: get("qty") || get("quantity"),
     unit: get("unit"),
     brand: get("brand"),
     spec: get("spec"),

@@ -6,7 +6,7 @@
  * success screen is shown. When false, the form POSTs to SUBMIT_ENDPOINT.
  */
 export const CONFIG = {
-  MOCK_MODE: true,
+  MOCK_MODE: false,
 
   /*
    * Where the vendor's quote is submitted. Point this at a Zoho Creator

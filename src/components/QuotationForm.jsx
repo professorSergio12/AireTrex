@@ -7,8 +7,17 @@ import { SuccessScreen } from "./SuccessScreen";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function initialLinePrices(lineItems) {
-  return lineItems.map(() => ({ price: "" }));
+function initialLineRows(lineItems, defaultGst) {
+  return lineItems.map(() => ({
+    price: "",
+    leadTime: "",
+    validity: "",
+    freight: "",
+    gst: defaultGst,
+    remarks: "",
+    attachment: null,
+    datasheet: null,
+  }));
 }
 
 export function QuotationForm() {
@@ -16,40 +25,34 @@ export function QuotationForm() {
   const lineItems = useMemo(() => resolveLineItems(rfq), [rfq]);
   const uniqueId = useMemo(() => resolveUid(rfq), [rfq]);
   const multiItem = lineItems.length > 1;
+  const defaultGst = "18";
 
   const [form, setForm] = useState({
     quoteNumber: "",
     quoteDate: today(),
     contactEmail: rfq.email || "",
     currency: rfq.currency || "INR",
-    leadTime: "",
-    validity: "",
-    freight: "",
-    gst: "18",
     remarks: "",
   });
-  const [linePrices, setLinePrices] = useState(() => initialLinePrices(lineItems));
+  const [lineRows, setLineRows] = useState(() => initialLineRows(lineItems, defaultGst));
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
-  const [attachment, setAttachment] = useState(null);
-  const [datasheet, setDatasheet] = useState(null);
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
-
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  function setLinePrice(index, value) {
-    setLinePrices((rows) =>
-      rows.map((row, i) => (i === index ? { ...row, price: value } : row))
+  function patchLineRow(index, patch) {
+    setLineRows((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row))
     );
   }
 
   function validate() {
     const e = {};
-    linePrices.forEach((row, i) => {
+    lineRows.forEach((row, i) => {
       if (!row.price || Number(row.price) <= 0) {
-        e[`price_${i}`] = "Enter a valid price.";
+        e[`price_${i}`] = "Required";
       }
     });
     if (form.contactEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.contactEmail)) {
@@ -65,14 +68,23 @@ export function QuotationForm() {
     setStatus("submitting");
     setErrMsg("");
 
-    const items = lineItems.map((line, i) => ({
-      itemId: line.itemId,
-      product: line.product,
-      quantity: line.quantity,
-      unit: line.unit,
-      price: linePrices[i]?.price || "",
-      uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
-    }));
+    const items = lineItems.map((line, i) => {
+      const row = lineRows[i] || {};
+      return {
+        itemId: line.itemId,
+        itemMasterId: line.itemId,
+        product: line.product,
+        quantity: line.quantity,
+        unit: line.unit,
+        price: row.price || "",
+        leadTime: row.leadTime || "",
+        validity: row.validity || "",
+        freight: row.freight || "",
+        gst: row.gst || defaultGst,
+        remarks: row.remarks || "",
+        uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
+      };
+    });
 
     const payload = {
       uniqueId,
@@ -85,21 +97,22 @@ export function QuotationForm() {
       quoteDate: form.quoteDate,
       contactEmail: form.contactEmail,
       currency: form.currency,
-      leadTime: form.leadTime,
-      validity: form.validity,
-      freight: form.freight,
-      gst: form.gst,
       remarks: form.remarks,
       items: JSON.stringify(items),
-      // Legacy single-item fields (first row) for backward compatibility
       itemId: items[0]?.itemId || "",
       product: items[0]?.product || "",
       quantity: items[0]?.quantity || "",
       price: items[0]?.price || "",
     };
 
+    const files = {};
+    lineRows.forEach((row, i) => {
+      if (row.attachment) files[`attachment_${i}`] = row.attachment;
+      if (row.datasheet) files[`datasheet_${i}`] = row.datasheet;
+    });
+
     try {
-      const result = await submitQuotation(payload, { attachment, datasheet });
+      const result = await submitQuotation(payload, files);
       if (result.uploadWarning) {
         setErrMsg(`Quotation saved, but file upload failed: ${result.uploadWarning}`);
         setStatus("error");
@@ -127,7 +140,7 @@ export function QuotationForm() {
           <h1>Quotation Form</h1>
           <p>
             {multiItem
-              ? `Submit quotes for ${lineItems.length} items in one form`
+              ? `Quote ${lineItems.length} items in one submission`
               : "Fill quote details for the requested item"}
           </p>
         </div>
@@ -136,8 +149,7 @@ export function QuotationForm() {
 
       {!linkValid && (
         <div className="alert alert--warn">
-          This link is missing RFQ details. Please use the link from your RFQ
-          email so the form can identify your enquiry.
+          This link is missing RFQ details. Please use the link from your RFQ email.
         </div>
       )}
 
@@ -147,58 +159,16 @@ export function QuotationForm() {
           <div className="grid grid-3">
             <ReadOnlyField label="RFQ #" value={rfq.rfqNumber} />
             <ReadOnlyField
-              label="Items"
-              value={multiItem ? `${lineItems.length} line items` : lineItems[0]?.itemId}
+              label="Line Items"
+              value={multiItem ? `${lineItems.length} items` : lineItems[0]?.product}
             />
             <ReadOnlyField label="Vendor" value={rfq.vendorName || rfq.vendorId} />
           </div>
         </section>
 
         <section className="card">
-          <h2 className="card__title">Items to Quote</h2>
-          <div className="items-table-wrap">
-            <table className="items-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Unit Price *</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((line, i) => (
-                  <tr key={`${line.itemId}-${i}`}>
-                    <td>
-                      <strong>{line.product || "—"}</strong>
-                      <div className="muted small">Item ID: {line.itemId || "—"}</div>
-                    </td>
-                    <td>{qtyLabel(line)}</td>
-                    <td>
-                      <input
-                        className={`input ${errors[`price_${i}`] ? "input--error" : ""}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={linePrices[i]?.price || ""}
-                        onChange={(e) => setLinePrice(i, e.target.value)}
-                      />
-                      {errors[`price_${i}`] && (
-                        <div className="field-hint field-hint--error">
-                          {errors[`price_${i}`]}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="card">
           <h2 className="card__title">Quote Information</h2>
-          <div className="grid grid-2">
+          <div className="grid grid-3">
             <Field label="Quote Number">
               <input
                 className="input"
@@ -215,6 +185,15 @@ export function QuotationForm() {
                 onChange={set("quoteDate")}
               />
             </Field>
+            <Field label="Currency">
+              <select className="input" value={form.currency} onChange={set("currency")}>
+                {CONFIG.CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
           <Field label="Contact Email" hint={errors.contactEmail}>
             <input
@@ -228,83 +207,123 @@ export function QuotationForm() {
         </section>
 
         <section className="card">
-          <h2 className="card__title">Quote Details</h2>
-          <div className="grid grid-3">
-            <Field label="Currency">
-              <select className="input" value={form.currency} onChange={set("currency")}>
-                {CONFIG.CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Lead Time">
-              <input
-                className="input"
-                placeholder="e.g. 4-6 weeks"
-                value={form.leadTime}
-                onChange={set("leadTime")}
-              />
-            </Field>
-            <Field label="Validity">
-              <input
-                className="input"
-                placeholder="e.g. 30 days"
-                value={form.validity}
-                onChange={set("validity")}
-              />
-            </Field>
+          <h2 className="card__title">Items to Quote</h2>
+          <div className="items-table-wrap items-table-wrap--wide">
+            <table className="items-table items-table--quote">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Unit Price *</th>
+                  <th>Lead Time</th>
+                  <th>Validity</th>
+                  <th>Freight</th>
+                  <th>GST %</th>
+                  <th>Remarks</th>
+                  <th>Attachment</th>
+                  <th>Datasheet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((line, i) => {
+                  const row = lineRows[i] || {};
+                  return (
+                    <tr key={`${line.itemId}-${i}`}>
+                      <td className="items-table__product">
+                        <strong>{line.product || "—"}</strong>
+                        <div className="muted small">Item Master ID: {line.itemId || "—"}</div>
+                      </td>
+                      <td className="items-table__qty">{qtyLabel(line)}</td>
+                      <td>
+                        <input
+                          className={`input input--compact ${errors[`price_${i}`] ? "input--error" : ""}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={row.price}
+                          onChange={(e) => patchLineRow(i, { price: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--compact"
+                          placeholder="4-6 weeks"
+                          value={row.leadTime}
+                          onChange={(e) => patchLineRow(i, { leadTime: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--compact"
+                          placeholder="30 days"
+                          value={row.validity}
+                          onChange={(e) => patchLineRow(i, { validity: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--compact"
+                          placeholder="0"
+                          value={row.freight}
+                          onChange={(e) => patchLineRow(i, { freight: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--compact"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={row.gst}
+                          onChange={(e) => patchLineRow(i, { gst: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--compact"
+                          placeholder="Notes"
+                          value={row.remarks}
+                          onChange={(e) => patchLineRow(i, { remarks: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--file input--compact"
+                          type="file"
+                          onChange={(e) =>
+                            patchLineRow(i, { attachment: e.target.files?.[0] || null })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input input--file input--compact"
+                          type="file"
+                          onChange={(e) =>
+                            patchLineRow(i, { datasheet: e.target.files?.[0] || null })
+                          }
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div className="grid grid-2">
-            <Field label="Freight">
-              <input
-                className="input"
-                placeholder="e.g. Ex-works / 500"
-                value={form.freight}
-                onChange={set("freight")}
-              />
-            </Field>
-            <Field label="GST (%)">
-              <input
-                className="input"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.gst}
-                onChange={set("gst")}
-              />
-            </Field>
-          </div>
+          <TotalPreview form={form} lineRows={lineRows} lineItems={lineItems} />
+        </section>
 
-          <TotalPreview form={form} linePrices={linePrices} lineItems={lineItems} />
-
-          <Field label="Remarks">
+        <section className="card">
+          <Field label="Overall Remarks (Optional)">
             <textarea
               className="input textarea"
-              rows={3}
-              placeholder="Additional notes…"
+              rows={2}
+              placeholder="General notes for this quotation…"
               value={form.remarks}
               onChange={set("remarks")}
             />
           </Field>
-
-          <div className="grid grid-2">
-            <Field label="Attachment (Optional)">
-              <input
-                className="input input--file"
-                type="file"
-                onChange={(e) => setAttachment(e.target.files?.[0] || null)}
-              />
-            </Field>
-            <Field label="Datasheet (Optional)">
-              <input
-                className="input input--file"
-                type="file"
-                onChange={(e) => setDatasheet(e.target.files?.[0] || null)}
-              />
-            </Field>
-          </div>
         </section>
 
         {errMsg && <div className="alert alert--error">{errMsg}</div>}
@@ -332,29 +351,33 @@ function qtyLabel(line) {
   return `${line.quantity} ${line.unit || ""}`.trim();
 }
 
-function TotalPreview({ form, linePrices, lineItems }) {
-  const gst = Number(form.gst) || 0;
-  const freight = Number(form.freight) || 0;
+function TotalPreview({ form, lineRows, lineItems }) {
   let subtotal = 0;
+  let totalFreight = 0;
+  let totalGst = 0;
 
   lineItems.forEach((line, i) => {
-    const price = Number(linePrices[i]?.price) || 0;
+    const row = lineRows[i] || {};
+    const price = Number(row.price) || 0;
     const qty = Number(line.quantity) || 1;
-    subtotal += price * qty;
+    const freight = Number(row.freight) || 0;
+    const gstPct = Number(row.gst) || 0;
+    const lineBase = price * qty;
+    subtotal += lineBase;
+    totalFreight += freight;
+    totalGst += (lineBase * gstPct) / 100;
   });
 
   if (!subtotal) return null;
-
-  const gstAmt = (subtotal * gst) / 100;
-  const total = subtotal + gstAmt + freight;
+  const total = subtotal + totalGst + totalFreight;
   const fmt = (n) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="total-preview">
       <span>Subtotal: {form.currency} {fmt(subtotal)}</span>
-      <span>+ GST ({gst}%): {form.currency} {fmt(gstAmt)}</span>
-      {freight > 0 && <span>+ Freight: {form.currency} {fmt(freight)}</span>}
+      <span>GST total: {form.currency} {fmt(totalGst)}</span>
+      {totalFreight > 0 && <span>Freight total: {form.currency} {fmt(totalFreight)}</span>}
       <strong>Grand total: {form.currency} {fmt(total)}</strong>
     </div>
   );

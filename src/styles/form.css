@@ -141,24 +141,39 @@ select.input { appearance: auto; }
 
 /* ---------------- Multi-item table ---------------- */
 .items-table-wrap { overflow-x: auto; margin-top: 8px; }
+.items-table-wrap--wide { -webkit-overflow-scrolling: touch; }
 .items-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
+  min-width: 960px;
 }
 .items-table th,
 .items-table td {
-  padding: 12px 10px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 .items-table th {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: .04em;
   color: var(--muted);
+  white-space: nowrap;
 }
-.items-table .small { font-size: 12px; margin-top: 4px; }
+.items-table--quote .items-table__product { min-width: 140px; }
+.items-table--quote .items-table__qty { white-space: nowrap; }
+.items-table .small { font-size: 11px; margin-top: 4px; }
+.input--compact {
+  min-width: 88px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.input--file.input--compact {
+  padding: 6px 4px;
+  font-size: 11px;
+  max-width: 130px;
+}
 .field-hint { font-size: 12px; margin-top: 4px; color: var(--muted); }
 .field-hint--error { color: #c0392b; }

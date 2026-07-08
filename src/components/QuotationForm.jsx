@@ -75,10 +75,7 @@ export function QuotationForm() {
     try {
       const result = await submitQuotation(payload, { attachment, datasheet });
       if (result.uploadWarning) {
-        setErrMsg(
-          `Quotation saved, but file upload failed: ${result.uploadWarning}. ` +
-            "Please contact the buyer or retry with a smaller file."
-        );
+        setErrMsg(`Quotation saved, but file upload failed: ${result.uploadWarning}`);
         setStatus("error");
         return;
       }

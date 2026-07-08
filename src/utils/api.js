@@ -52,5 +52,9 @@ export async function submitQuotation(payload, files = {}) {
   }
 
   console.error("Submission rejected:", result);
-  throw new Error(result.message || `Submit failed (HTTP ${res.status}).`);
+  const detailMsg =
+    Array.isArray(result.detail?.error) && result.detail.error.length
+      ? result.detail.error.join("; ")
+      : "";
+  throw new Error(detailMsg || result.message || `Submit failed (HTTP ${res.status}).`);
 }

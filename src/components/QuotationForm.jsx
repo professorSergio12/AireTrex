@@ -1,22 +1,26 @@
 import { useMemo, useState } from "react";
 import { CONFIG } from "../config";
-import { getRfqParams, resolveUid } from "../utils/params";
+import { getRfqParams, resolveLineItems, resolveUid } from "../utils/params";
 import { submitQuotation } from "../utils/api";
 import { Field, ReadOnlyField } from "./Field";
 import { SuccessScreen } from "./SuccessScreen";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+function initialLinePrices(lineItems) {
+  return lineItems.map(() => ({ price: "" }));
+}
+
 export function QuotationForm() {
-  // RFQ context prefilled from the email link (read once).
   const rfq = useMemo(() => getRfqParams(), []);
+  const lineItems = useMemo(() => resolveLineItems(rfq), [rfq]);
   const uniqueId = useMemo(() => resolveUid(rfq), [rfq]);
+  const multiItem = lineItems.length > 1;
 
   const [form, setForm] = useState({
     quoteNumber: "",
     quoteDate: today(),
     contactEmail: rfq.email || "",
-    price: "",
     currency: rfq.currency || "INR",
     leadTime: "",
     validity: "",
@@ -24,22 +28,33 @@ export function QuotationForm() {
     gst: "18",
     remarks: "",
   });
+  const [linePrices, setLinePrices] = useState(() => initialLinePrices(lineItems));
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState("idle"); // idle | submitting | done | error
+  const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [datasheet, setDatasheet] = useState(null);
 
-  // Guard: link must carry enough context to identify the RFQ.
-  const linkValid = Boolean(rfq.rfqNumber && rfq.itemId);
+  const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  function setLinePrice(index, value) {
+    setLinePrices((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, price: value } : row))
+    );
+  }
+
   function validate() {
     const e = {};
-    if (!form.price || Number(form.price) <= 0) e.price = "Enter a valid price.";
-    if (form.contactEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.contactEmail))
+    linePrices.forEach((row, i) => {
+      if (!row.price || Number(row.price) <= 0) {
+        e[`price_${i}`] = "Enter a valid price.";
+      }
+    });
+    if (form.contactEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.contactEmail)) {
       e.contactEmail = "Enter a valid email.";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -50,26 +65,37 @@ export function QuotationForm() {
     setStatus("submitting");
     setErrMsg("");
 
+    const items = lineItems.map((line, i) => ({
+      itemId: line.itemId,
+      product: line.product,
+      quantity: line.quantity,
+      unit: line.unit,
+      price: linePrices[i]?.price || "",
+      uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
+    }));
+
     const payload = {
       uniqueId,
       rfqNumber: rfq.rfqNumber,
       rfqRecordId: rfq.rfqRecordId,
-      itemId: rfq.itemId,
       vendorId: rfq.vendorId,
       vendorRecordId: rfq.vendorRecordId,
       vendorName: rfq.vendorName,
-      product: rfq.product,
-      quantity: rfq.quantity,
       quoteNumber: form.quoteNumber,
       quoteDate: form.quoteDate,
       contactEmail: form.contactEmail,
-      price: form.price,
       currency: form.currency,
       leadTime: form.leadTime,
       validity: form.validity,
       freight: form.freight,
       gst: form.gst,
       remarks: form.remarks,
+      items: JSON.stringify(items),
+      // Legacy single-item fields (first row) for backward compatibility
+      itemId: items[0]?.itemId || "",
+      product: items[0]?.product || "",
+      quantity: items[0]?.quantity || "",
+      price: items[0]?.price || "",
     };
 
     try {
@@ -88,7 +114,9 @@ export function QuotationForm() {
   }
 
   if (status === "done") {
-    return <SuccessScreen rfq={rfq} uniqueId={uniqueId} />;
+    return (
+      <SuccessScreen rfq={rfq} uniqueId={uniqueId} itemCount={lineItems.length} />
+    );
   }
 
   return (
@@ -97,7 +125,11 @@ export function QuotationForm() {
         <div className="brand__logo">AT</div>
         <div>
           <h1>Quotation Form</h1>
-          <p>Fill quote details for the requested item</p>
+          <p>
+            {multiItem
+              ? `Submit quotes for ${lineItems.length} items in one form`
+              : "Fill quote details for the requested item"}
+          </p>
         </div>
         {CONFIG.MOCK_MODE && <span className="mock-pill">DEMO MODE</span>}
       </header>
@@ -110,29 +142,60 @@ export function QuotationForm() {
       )}
 
       <form onSubmit={onSubmit} noValidate>
-        {/* ---------------- RFQ reference (prefilled) ---------------- */}
         <section className="card">
           <h2 className="card__title">RFQ Reference</h2>
           <div className="grid grid-3">
             <ReadOnlyField label="RFQ #" value={rfq.rfqNumber} />
-            <ReadOnlyField label="RFQ Item ID" value={rfq.itemId} />
-            <ReadOnlyField label="Vendor" value={rfq.vendorName || rfq.vendorId} />
-          </div>
-          <Field label="Product / Requirement">
-            <textarea
-              className="input textarea"
-              rows={2}
-              value={buildProductSummary(rfq)}
-              readOnly
+            <ReadOnlyField
+              label="Items"
+              value={multiItem ? `${lineItems.length} line items` : lineItems[0]?.itemId}
             />
-          </Field>
-          <div className="grid grid-2">
-            <ReadOnlyField label="Quantity" value={qtyLabel(rfq)} />
-            <ReadOnlyField label="Brand" value={rfq.brand} />
+            <ReadOnlyField label="Vendor" value={rfq.vendorName || rfq.vendorId} />
           </div>
         </section>
 
-        {/* ---------------- Quote information ---------------- */}
+        <section className="card">
+          <h2 className="card__title">Items to Quote</h2>
+          <div className="items-table-wrap">
+            <table className="items-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Quantity</th>
+                  <th>Unit Price *</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((line, i) => (
+                  <tr key={`${line.itemId}-${i}`}>
+                    <td>
+                      <strong>{line.product || "—"}</strong>
+                      <div className="muted small">Item ID: {line.itemId || "—"}</div>
+                    </td>
+                    <td>{qtyLabel(line)}</td>
+                    <td>
+                      <input
+                        className={`input ${errors[`price_${i}`] ? "input--error" : ""}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={linePrices[i]?.price || ""}
+                        onChange={(e) => setLinePrice(i, e.target.value)}
+                      />
+                      {errors[`price_${i}`] && (
+                        <div className="field-hint field-hint--error">
+                          {errors[`price_${i}`]}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="card">
           <h2 className="card__title">Quote Information</h2>
           <div className="grid grid-2">
@@ -153,7 +216,7 @@ export function QuotationForm() {
               />
             </Field>
           </div>
-          <Field label="Contact Email" hint={errors.contactEmail} >
+          <Field label="Contact Email" hint={errors.contactEmail}>
             <input
               className={`input ${errors.contactEmail ? "input--error" : ""}`}
               type="email"
@@ -164,25 +227,15 @@ export function QuotationForm() {
           </Field>
         </section>
 
-        {/* ---------------- Quote details ---------------- */}
         <section className="card">
           <h2 className="card__title">Quote Details</h2>
           <div className="grid grid-3">
-            <Field label="Price" required hint={errors.price}>
-              <input
-                className={`input ${errors.price ? "input--error" : ""}`}
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={form.price}
-                onChange={set("price")}
-              />
-            </Field>
             <Field label="Currency">
               <select className="input" value={form.currency} onChange={set("currency")}>
                 {CONFIG.CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -194,8 +247,6 @@ export function QuotationForm() {
                 onChange={set("leadTime")}
               />
             </Field>
-          </div>
-          <div className="grid grid-3">
             <Field label="Validity">
               <input
                 className="input"
@@ -204,6 +255,8 @@ export function QuotationForm() {
                 onChange={set("validity")}
               />
             </Field>
+          </div>
+          <div className="grid grid-2">
             <Field label="Freight">
               <input
                 className="input"
@@ -224,7 +277,7 @@ export function QuotationForm() {
             </Field>
           </div>
 
-          <TotalPreview form={form} />
+          <TotalPreview form={form} linePrices={linePrices} lineItems={lineItems} />
 
           <Field label="Remarks">
             <textarea
@@ -262,7 +315,11 @@ export function QuotationForm() {
             type="submit"
             disabled={status === "submitting" || !linkValid}
           >
-            {status === "submitting" ? "Submitting…" : "Submit Quotation"}
+            {status === "submitting"
+              ? "Submitting…"
+              : multiItem
+                ? `Submit Quotation (${lineItems.length} items)`
+                : "Submit Quotation"}
           </button>
         </div>
       </form>
@@ -270,29 +327,35 @@ export function QuotationForm() {
   );
 }
 
-function qtyLabel(rfq) {
-  if (!rfq.quantity) return "—";
-  return `${rfq.quantity} ${rfq.unit || ""}`.trim();
+function qtyLabel(line) {
+  if (!line.quantity) return "—";
+  return `${line.quantity} ${line.unit || ""}`.trim();
 }
 
-function buildProductSummary(rfq) {
-  const parts = [rfq.product, rfq.spec].filter(Boolean);
-  return parts.join(" — ") || "—";
-}
-
-function TotalPreview({ form }) {
-  const price = Number(form.price) || 0;
+function TotalPreview({ form, linePrices, lineItems }) {
   const gst = Number(form.gst) || 0;
-  if (!price) return null;
-  const gstAmt = (price * gst) / 100;
-  const total = price + gstAmt;
+  const freight = Number(form.freight) || 0;
+  let subtotal = 0;
+
+  lineItems.forEach((line, i) => {
+    const price = Number(linePrices[i]?.price) || 0;
+    const qty = Number(line.quantity) || 1;
+    subtotal += price * qty;
+  });
+
+  if (!subtotal) return null;
+
+  const gstAmt = (subtotal * gst) / 100;
+  const total = subtotal + gstAmt + freight;
   const fmt = (n) =>
     n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
     <div className="total-preview">
-      <span>Unit price: {form.currency} {fmt(price)}</span>
+      <span>Subtotal: {form.currency} {fmt(subtotal)}</span>
       <span>+ GST ({gst}%): {form.currency} {fmt(gstAmt)}</span>
-      <strong>Landed / unit: {form.currency} {fmt(total)}</strong>
+      {freight > 0 && <span>+ Freight: {form.currency} {fmt(freight)}</span>}
+      <strong>Grand total: {form.currency} {fmt(total)}</strong>
     </div>
   );
 }

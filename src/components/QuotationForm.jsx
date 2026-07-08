@@ -73,7 +73,15 @@ export function QuotationForm() {
     };
 
     try {
-      await submitQuotation(payload, { attachment, datasheet });
+      const result = await submitQuotation(payload, { attachment, datasheet });
+      if (result.uploadWarning) {
+        setErrMsg(
+          `Quotation saved, but file upload failed: ${result.uploadWarning}. ` +
+            "Please contact the buyer or retry with a smaller file."
+        );
+        setStatus("error");
+        return;
+      }
       setStatus("done");
     } catch (err) {
       console.error(err);

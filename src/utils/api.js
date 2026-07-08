@@ -40,7 +40,15 @@ export async function submitQuotation(payload, files = {}) {
   try { result = await res.json(); } catch { /* non-JSON response */ }
 
   if (res.ok && result.ok) {
-    return { ok: true, uniqueId: payload.uniqueId, recordId: result.recordId };
+    if (result.uploadWarning) {
+      console.warn("Quotation saved but file upload failed:", result.uploadWarning, result.uploads);
+    }
+    return {
+      ok: true,
+      uniqueId: payload.uniqueId,
+      recordId: result.recordId,
+      uploadWarning: result.uploadWarning || null,
+    };
   }
 
   console.error("Submission rejected:", result);

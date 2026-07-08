@@ -11,8 +11,10 @@ export function getRfqParams() {
     // Unique correlation id: <RFQ_Number>_<Item_ID>_<Vendor_Code>
     uid: get("uid"),
     rfqNumber: get("rfq_no"),
+    rfqRecordId: get("rfq_rid"),      // exact Creator record id for RFQ_ID lookup
     itemId: get("item_id"),
     vendorId: get("vendor_id"),
+    vendorRecordId: get("vendor_rid"), // exact Creator record id for Vendor_Master
     vendorName: get("vendor_name"),
     product: get("product"),
     // Accept both `qty` (widget/Deluge link) and `quantity` (manual links).

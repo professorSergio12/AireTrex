@@ -54,20 +54,46 @@ http://localhost:5173/?uid=RFQ-2026-001_IT-001_VEN-001&rfq_no=RFQ-2026-001&item_
 | `spec`        | Spec / description                        |
 | `email`       | Vendor email (prefills contact)           |
 
-## Going live
+## Going live — where submissions land
 
-Edit `src/config.js`:
+Submitted quotes are written straight into the **Vendor Quotations** Creator
+module (so they show in the Vendor Quotations Report) via the **Creator v2 Data
+API** (Add Records). `utils/api.js` → `buildCreatorPayload` builds the exact
+body your form expects:
+
+```jsonc
+{
+  "data": {
+    "RFQ_ID": "...",            // main form
+    "Vendor_Master": "VEN-001", // main form
+    "Submission_Date": "06-Jul-2026 12:31:00",
+    "Quotation_Items": [        // subform grid
+      { "RFQ_Item_ID": "...", "Product": "...", "Quantity": 34,
+        "Currency": "INR", "Freight": 500, "Unit_Price": 210,
+        "GST": 18, "Total_Amount": 8449.2, "Validity": "30 days",
+        "Remarks": "..." }
+    ],
+    "Margin": 0,
+    "Status": "Pending Review"
+  }
+}
+```
+
+Setup in `src/config.js` → `CONFIG.CREATOR`:
 
 1. `MOCK_MODE: false`
-2. `SUBMIT_ENDPOINT` → your backend or Zoho Creator "Add Records" endpoint.
+2. `dc`, `accountOwner`, `appLinkName` → your app (URL becomes
+   `https://creator.zoho.<dc>/api/v2/<owner>/<app>/form/Vendor_Quotations`).
+3. `accessToken` → OAuth token with `ZohoCreator.form.CREATE` scope.
 
-The payload always includes `uniqueId`; `utils/api.js` → `buildCreatorBody`
-maps it (and every quote field) to Creator field link names. Adjust those names
-to match your Quotation form.
+`Total_Amount` is computed as `(Unit_Price × Quantity) + GST + Freight`; all
+numeric fields are coerced with `parseFloat`/`parseInt` so strict subform
+validation won't reject them.
 
-> For public vendor submissions, proxy through your own backend so the Zoho
-> OAuth token stays server-side. The form only needs a URL that accepts the JSON
-> payload.
+> ⚠️ A token in browser code is public and the Creator host will usually block
+> the request via CORS. For production, proxy this POST through your own backend
+> or a Zoho Catalyst function so the token stays server-side. `../DELUGE_saveVendorQuotation.dg`
+> is an alternative if you'd rather expose a public Deluge REST function instead.
 
 ## Build for deployment
 

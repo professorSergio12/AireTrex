@@ -27,7 +27,8 @@ export function QuotationForm() {
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle"); // idle | submitting | done | error
   const [errMsg, setErrMsg] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [attachment, setAttachment] = useState(null);
+  const [datasheet, setDatasheet] = useState(null);
 
   // Guard: link must carry enough context to identify the RFQ.
   const linkValid = Boolean(rfq.rfqNumber && rfq.itemId);
@@ -52,8 +53,10 @@ export function QuotationForm() {
     const payload = {
       uniqueId,
       rfqNumber: rfq.rfqNumber,
+      rfqRecordId: rfq.rfqRecordId,
       itemId: rfq.itemId,
       vendorId: rfq.vendorId,
+      vendorRecordId: rfq.vendorRecordId,
       vendorName: rfq.vendorName,
       product: rfq.product,
       quantity: rfq.quantity,
@@ -67,11 +70,10 @@ export function QuotationForm() {
       freight: form.freight,
       gst: form.gst,
       remarks: form.remarks,
-      attachmentName: fileName,
     };
 
     try {
-      await submitQuotation(payload);
+      await submitQuotation(payload, { attachment, datasheet });
       setStatus("done");
     } catch (err) {
       console.error(err);
@@ -229,13 +231,22 @@ export function QuotationForm() {
             />
           </Field>
 
-          <Field label="Attachment (Optional)">
-            <input
-              className="input input--file"
-              type="file"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name || "")}
-            />
-          </Field>
+          <div className="grid grid-2">
+            <Field label="Attachment (Optional)">
+              <input
+                className="input input--file"
+                type="file"
+                onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+              />
+            </Field>
+            <Field label="Datasheet (Optional)">
+              <input
+                className="input input--file"
+                type="file"
+                onChange={(e) => setDatasheet(e.target.files?.[0] || null)}
+              />
+            </Field>
+          </div>
         </section>
 
         {errMsg && <div className="alert alert--error">{errMsg}</div>}

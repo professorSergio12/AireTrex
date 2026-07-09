@@ -145,7 +145,7 @@ export function QuotationForm() {
   }
 
   return (
-    <div className="page">
+    <div className="page page--wide">
       <header className="brand">
         <div className="brand__logo">AT</div>
         <div>
@@ -205,20 +205,39 @@ export function QuotationForm() {
           </div>
         </section>
 
-        <section className="card">
+        <section className="card card--table">
           <h2 className="card__title">Items to Quote</h2>
-          <div className="item-cards">
-            {lineItems.map((line, i) => (
-              <ItemCard
-                key={`${line.itemId}-${i}`}
-                index={i}
-                line={line}
-                row={lineRows[i] || {}}
-                currency={form.currency}
-                errors={errors}
-                onPatch={(patch) => patchLineRow(i, patch)}
-              />
-            ))}
+          <div className="items-table-wrap">
+            <table className="items-table items-table--quote">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Description</th>
+                  <th>Delivery</th>
+                  <th>Line Total *</th>
+                  <th>GST %</th>
+                  <th>Unit Price</th>
+                  <th>GST Amt</th>
+                  <th>Total</th>
+                  <th>Remarks</th>
+                  <th>Attach</th>
+                  <th>Sheet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map((line, i) => (
+                  <ItemTableRow
+                    key={`${line.itemId}-${i}`}
+                    index={i}
+                    line={line}
+                    row={lineRows[i] || {}}
+                    errors={errors}
+                    onPatch={(patch) => patchLineRow(i, patch)}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
           <GrandTotalPreview currency={form.currency} lineItems={lineItems} lineRows={lineRows} />
         </section>
@@ -255,122 +274,97 @@ export function QuotationForm() {
   );
 }
 
-function ItemCard({ index, line, row, currency, errors, onPatch }) {
+function ItemTableRow({ index, line, row, errors, onPatch }) {
   const pricing = calcLinePricing({
     totalAmount: row.totalAmount,
     gstPct: row.gst,
     quantity: line.quantity,
   });
 
+  const fmtShort = (n) =>
+    n > 0
+      ? Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })
+      : "—";
+
   return (
-    <article className="item-card">
-      <header className="item-card__head">
-        <div>
-          <span className="item-card__index">Item {index + 1}</span>
-          <h3 className="item-card__title">{line.product || "—"}</h3>
-        </div>
-        <span className="item-card__qty">{qtyLabel(line)}</span>
-      </header>
-
-      <div className="item-card__grid">
-        <Field label="Product Description">
-          <textarea
-            className="input textarea textarea--compact"
-            rows={2}
-            placeholder="Describe the product you are quoting…"
-            value={row.description}
-            onChange={(e) => onPatch({ description: e.target.value })}
-          />
-        </Field>
-
-        <Field label="Delivery Date">
-          <input
-            className="input"
-            type="date"
-            value={row.deliveryDate}
-            onChange={(e) => onPatch({ deliveryDate: e.target.value })}
-          />
-        </Field>
-
-        <Field label="Line Total (ex-GST) *" hint={errors[`totalAmount_${index}`]}>
-          <input
-            className={`input ${errors[`totalAmount_${index}`] ? "input--error" : ""}`}
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="0.00"
-            value={row.totalAmount}
-            onChange={(e) => onPatch({ totalAmount: e.target.value })}
-          />
-        </Field>
-
-        <Field label="GST %">
-          <input
-            className="input"
-            type="number"
-            min="0"
-            step="0.01"
-            value={row.gst}
-            onChange={(e) => onPatch({ gst: e.target.value })}
-          />
-        </Field>
-
-        <ReadOnlyField
-          label="Unit Price (calculated)"
-          value={
-            pricing.unitPrice > 0
-              ? fmtMoney(pricing.unitPrice, currency)
-              : "—"
-          }
+    <tr>
+      <td className="items-table__product">
+        <strong>{line.product || "—"}</strong>
+      </td>
+      <td className="items-table__qty">{qtyLabel(line)}</td>
+      <td>
+        <input
+          className="input input--compact input--cell"
+          placeholder="Description"
+          value={row.description}
+          onChange={(e) => onPatch({ description: e.target.value })}
         />
-
-        <ReadOnlyField
-          label="GST Amount (calculated)"
-          value={
-            pricing.gstAmount > 0
-              ? fmtMoney(pricing.gstAmount, currency)
-              : "—"
-          }
+      </td>
+      <td>
+        <input
+          className="input input--compact input--cell"
+          type="date"
+          value={row.deliveryDate}
+          onChange={(e) => onPatch({ deliveryDate: e.target.value })}
         />
-
-        <Field label="Remarks">
-          <input
-            className="input"
-            placeholder="Optional notes for this item"
-            value={row.remarks}
-            onChange={(e) => onPatch({ remarks: e.target.value })}
-          />
-        </Field>
-
-        <div className="item-card__files">
-          <span className="field__label">Files</span>
-          <div className="item-card__file-row">
-            <FileUploadField
-              label="Attachment"
-              file={row.attachment}
-              onChange={(file) => onPatch({ attachment: file })}
-            />
-            <FileUploadField
-              label="Datasheet"
-              file={row.datasheet}
-              onChange={(file) => onPatch({ datasheet: file })}
-            />
-          </div>
-        </div>
-      </div>
-
-      {pricing.grandTotal > 0 && (
-        <footer className="item-card__footer">
-          <strong>Line total incl. GST: {fmtMoney(pricing.grandTotal, currency)}</strong>
-        </footer>
-      )}
-    </article>
+      </td>
+      <td>
+        <input
+          className={`input input--compact input--cell ${errors[`totalAmount_${index}`] ? "input--error" : ""}`}
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="0"
+          value={row.totalAmount}
+          onChange={(e) => onPatch({ totalAmount: e.target.value })}
+        />
+      </td>
+      <td>
+        <input
+          className="input input--compact input--cell input--cell-narrow"
+          type="number"
+          min="0"
+          step="0.01"
+          value={row.gst}
+          onChange={(e) => onPatch({ gst: e.target.value })}
+        />
+      </td>
+      <td className="items-table__calc">{fmtShort(pricing.unitPrice)}</td>
+      <td className="items-table__calc">{fmtShort(pricing.gstAmount)}</td>
+      <td className="items-table__calc items-table__calc--total">
+        {pricing.grandTotal > 0 ? fmtShort(pricing.grandTotal) : "—"}
+      </td>
+      <td>
+        <input
+          className="input input--compact input--cell"
+          placeholder="Notes"
+          value={row.remarks}
+          onChange={(e) => onPatch({ remarks: e.target.value })}
+        />
+      </td>
+      <td>
+        <FileUploadField
+          label="File"
+          compact
+          file={row.attachment}
+          onChange={(file) => onPatch({ attachment: file })}
+        />
+      </td>
+      <td>
+        <FileUploadField
+          label="Sheet"
+          compact
+          file={row.datasheet}
+          onChange={(file) => onPatch({ datasheet: file })}
+        />
+      </td>
+    </tr>
   );
 }
 
 function qtyLabel(line) {
-  if (!line.quantity) return "Qty: —";
-  return `Qty: ${line.quantity} ${line.unit || ""}`.trim();
+  if (!line.quantity) return "—";
+  return `${line.quantity} ${line.unit || ""}`.trim();
 }
 
 function GrandTotalPreview({ currency, lineItems, lineRows }) {

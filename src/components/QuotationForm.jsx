@@ -21,6 +21,7 @@ function initialLineRows(lineItems) {
     unitPrice: "",
     remarks: "",
     attachment: null,
+    datasheet: null,
   }));
 }
 
@@ -119,6 +120,7 @@ export function QuotationForm() {
     const files = {};
     lineRows.forEach((row, i) => {
       if (row.attachment) files[`attachment_${i}`] = row.attachment;
+      if (row.datasheet) files[`datasheet_${i}`] = row.datasheet;
     });
 
     try {
@@ -218,6 +220,7 @@ export function QuotationForm() {
                   <th>Total</th>
                   <th>Remarks</th>
                   <th>Attachment</th>
+                  <th>Datasheet</th>
                 </tr>
               </thead>
               <tbody>
@@ -332,6 +335,14 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           compact
           file={row.attachment}
           onChange={(file) => onPatch({ attachment: file })}
+        />
+      </td>
+      <td>
+        <FileUploadField
+          label="Sheet"
+          compact
+          file={row.datasheet}
+          onChange={(file) => onPatch({ datasheet: file })}
         />
       </td>
     </tr>

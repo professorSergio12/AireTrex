@@ -1,13 +1,11 @@
-/** Auto quote number: compact datetime + last digit of RFQ number. */
+/** Auto quote number: QT-YYYY-MM-DD-RRRR (RFQ padded to 4 digits). */
 export function generateQuoteNumber(rfqNumber) {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
-  const dt =
-    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
-    `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const datePart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const digits = String(rfqNumber ?? "").replace(/\D/g, "");
-  const lastDigit = digits.slice(-1) || "0";
-  return `QT${dt}${lastDigit}`;
+  const rfqPart = digits.slice(-4).padStart(4, "0") || "0000";
+  return `QT-${datePart}-${rfqPart}`;
 }
 
 export function todayIso() {

@@ -19,6 +19,7 @@ function initialLineRows(lineItems) {
     description: "",
     deliveryDate: "",
     unitPrice: "",
+    gst: String(DEFAULT_GST),
     remarks: "",
     attachment: null,
     datasheet: null,
@@ -77,7 +78,7 @@ export function QuotationForm() {
       const row = lineRows[i] || {};
       const pricing = calcLineFromUnitPrice({
         unitPrice: row.unitPrice,
-        gstPct: DEFAULT_GST,
+        gstPct: row.gst,
         quantity: line.quantity,
       });
 
@@ -89,9 +90,9 @@ export function QuotationForm() {
         unit: line.unit,
         description: row.description || "",
         deliveryDate: row.deliveryDate || "",
-        totalAmount: String(pricing.subtotal),
+        totalAmount: String(pricing.grandTotal),
         price: String(pricing.unitPrice),
-        gst: String(DEFAULT_GST),
+        gst: String(row.gst || DEFAULT_GST),
         gstAmount: String(pricing.gstAmount),
         remarks: row.remarks || "",
         uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
@@ -216,7 +217,7 @@ export function QuotationForm() {
                   <th>Description</th>
                   <th>Delivery</th>
                   <th>Unit Price *</th>
-                  <th>GST</th>
+                  <th>GST %</th>
                   <th>Total</th>
                   <th>Remarks</th>
                   <th>Attachment</th>
@@ -275,7 +276,7 @@ export function QuotationForm() {
 function ItemTableRow({ index, line, row, errors, onPatch }) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
-    gstPct: DEFAULT_GST,
+    gstPct: row.gst,
     quantity: line.quantity,
   });
 
@@ -283,6 +284,8 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
     n > 0
       ? Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })
       : "—";
+
+  const showTotal = Number(row.unitPrice) > 0;
 
   return (
     <tr>
@@ -317,9 +320,19 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           onChange={(e) => onPatch({ unitPrice: e.target.value })}
         />
       </td>
-      <td className="items-table__calc">{fmtShort(pricing.gstAmount)}</td>
+      <td>
+        <input
+          className="input input--compact input--cell input--cell-narrow"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="18"
+          value={row.gst}
+          onChange={(e) => onPatch({ gst: e.target.value })}
+        />
+      </td>
       <td className="items-table__calc items-table__calc--total">
-        {pricing.grandTotal > 0 ? fmtShort(pricing.grandTotal) : "—"}
+        {showTotal ? fmtShort(pricing.grandTotal) : "—"}
       </td>
       <td>
         <input
@@ -362,7 +375,7 @@ function GrandTotalPreview({ currency, lineItems, lineRows }) {
     const row = lineRows[i] || {};
     const pricing = calcLineFromUnitPrice({
       unitPrice: row.unitPrice,
-      gstPct: DEFAULT_GST,
+      gstPct: row.gst,
       quantity: line.quantity,
     });
     subtotal += pricing.subtotal;

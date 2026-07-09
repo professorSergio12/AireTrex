@@ -49,6 +49,6 @@ export async function submitQuotation(payload, files = {}) {
   const detailMsg =
     Array.isArray(result.detail?.error) && result.detail.error.length
       ? result.detail.error.join("; ")
-      : "";
+      : result.detail?.message || result.detail?.description || "";
   throw new Error(detailMsg || result.message || `Submit failed (HTTP ${res.status}).`);
 }

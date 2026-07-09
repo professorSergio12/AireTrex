@@ -173,7 +173,7 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__product {
-  width: 11%;
+  width: 14%;
   word-break: break-word;
 }
 
@@ -184,7 +184,7 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__qty {
-  width: 6%;
+  width: 7%;
   white-space: nowrap;
   font-size: 11px;
   color: var(--ink-soft);

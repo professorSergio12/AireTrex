@@ -14,15 +14,15 @@ export function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Line totals from ex-GST subtotal entered by vendor. */
-export function calcLinePricing({ totalAmount, gstPct, quantity }) {
-  const subtotal = Number(totalAmount) || 0;
-  const gst = Number(gstPct) || 0;
+/** Line totals from unit price (GST @ 18% default). */
+export function calcLineFromUnitPrice({ unitPrice, gstPct = 18, quantity }) {
+  const price = Number(unitPrice) || 0;
+  const gst = Number(gstPct) || 18;
   const qty = Number(quantity) || 1;
-  const unitPrice = qty > 0 ? Math.round((subtotal / qty) * 100) / 100 : 0;
+  const subtotal = Math.round(price * qty * 100) / 100;
   const gstAmount = Math.round(((subtotal * gst) / 100) * 100) / 100;
   const grandTotal = Math.round((subtotal + gstAmount) * 100) / 100;
-  return { unitPrice, gstAmount, grandTotal, subtotal };
+  return { unitPrice: price, gstAmount, grandTotal, subtotal };
 }
 
 export function fmtMoney(n, currency = "INR") {

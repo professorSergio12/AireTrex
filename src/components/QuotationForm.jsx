@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CONFIG } from "../config";
 import { getRfqParams, resolveLineItems, resolveUid } from "../utils/params";
 import {
-  calcLinePricing,
+  calcLineFromUnitPrice,
   fmtMoney,
   generateQuoteNumber,
   todayIso,
@@ -12,15 +12,15 @@ import { Field, ReadOnlyField } from "./Field";
 import { FileUploadField } from "./FileUploadField";
 import { SuccessScreen } from "./SuccessScreen";
 
-function initialLineRows(lineItems, defaultGst) {
+const DEFAULT_GST = 18;
+
+function initialLineRows(lineItems) {
   return lineItems.map(() => ({
     description: "",
     deliveryDate: "",
-    totalAmount: "",
-    gst: defaultGst,
+    unitPrice: "",
     remarks: "",
     attachment: null,
-    datasheet: null,
   }));
 }
 
@@ -29,7 +29,6 @@ export function QuotationForm() {
   const lineItems = useMemo(() => resolveLineItems(rfq), [rfq]);
   const uniqueId = useMemo(() => resolveUid(rfq), [rfq]);
   const multiItem = lineItems.length > 1;
-  const defaultGst = "18";
   const autoQuoteNumber = useMemo(
     () => generateQuoteNumber(rfq.rfqNumber),
     [rfq.rfqNumber]
@@ -42,7 +41,7 @@ export function QuotationForm() {
     currency: rfq.currency || "INR",
     remarks: "",
   });
-  const [lineRows, setLineRows] = useState(() => initialLineRows(lineItems, defaultGst));
+  const [lineRows, setLineRows] = useState(() => initialLineRows(lineItems));
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
@@ -59,8 +58,8 @@ export function QuotationForm() {
   function validate() {
     const e = {};
     lineRows.forEach((row, i) => {
-      if (!row.totalAmount || Number(row.totalAmount) <= 0) {
-        e[`totalAmount_${i}`] = "Required";
+      if (!row.unitPrice || Number(row.unitPrice) <= 0) {
+        e[`unitPrice_${i}`] = "Required";
       }
     });
     setErrors(e);
@@ -75,9 +74,9 @@ export function QuotationForm() {
 
     const items = lineItems.map((line, i) => {
       const row = lineRows[i] || {};
-      const pricing = calcLinePricing({
-        totalAmount: row.totalAmount,
-        gstPct: row.gst,
+      const pricing = calcLineFromUnitPrice({
+        unitPrice: row.unitPrice,
+        gstPct: DEFAULT_GST,
         quantity: line.quantity,
       });
 
@@ -89,9 +88,9 @@ export function QuotationForm() {
         unit: line.unit,
         description: row.description || "",
         deliveryDate: row.deliveryDate || "",
-        totalAmount: row.totalAmount || "",
+        totalAmount: String(pricing.subtotal),
         price: String(pricing.unitPrice),
-        gst: row.gst || defaultGst,
+        gst: String(DEFAULT_GST),
         gstAmount: String(pricing.gstAmount),
         remarks: row.remarks || "",
         uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
@@ -120,7 +119,6 @@ export function QuotationForm() {
     const files = {};
     lineRows.forEach((row, i) => {
       if (row.attachment) files[`attachment_${i}`] = row.attachment;
-      if (row.datasheet) files[`datasheet_${i}`] = row.datasheet;
     });
 
     try {
@@ -215,14 +213,11 @@ export function QuotationForm() {
                   <th>Qty</th>
                   <th>Description</th>
                   <th>Delivery</th>
-                  <th>Line Total *</th>
-                  <th>GST %</th>
-                  <th>Unit Price</th>
-                  <th>GST Amt</th>
+                  <th>Unit Price *</th>
+                  <th>GST</th>
                   <th>Total</th>
                   <th>Remarks</th>
-                  <th>Attach</th>
-                  <th>Sheet</th>
+                  <th>Attachment</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,9 +270,9 @@ export function QuotationForm() {
 }
 
 function ItemTableRow({ index, line, row, errors, onPatch }) {
-  const pricing = calcLinePricing({
-    totalAmount: row.totalAmount,
-    gstPct: row.gst,
+  const pricing = calcLineFromUnitPrice({
+    unitPrice: row.unitPrice,
+    gstPct: DEFAULT_GST,
     quantity: line.quantity,
   });
 
@@ -310,26 +305,15 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
       </td>
       <td>
         <input
-          className={`input input--compact input--cell ${errors[`totalAmount_${index}`] ? "input--error" : ""}`}
+          className={`input input--compact input--cell ${errors[`unitPrice_${index}`] ? "input--error" : ""}`}
           type="number"
           min="0"
           step="0.01"
-          placeholder="0"
-          value={row.totalAmount}
-          onChange={(e) => onPatch({ totalAmount: e.target.value })}
+          placeholder="0.00"
+          value={row.unitPrice}
+          onChange={(e) => onPatch({ unitPrice: e.target.value })}
         />
       </td>
-      <td>
-        <input
-          className="input input--compact input--cell input--cell-narrow"
-          type="number"
-          min="0"
-          step="0.01"
-          value={row.gst}
-          onChange={(e) => onPatch({ gst: e.target.value })}
-        />
-      </td>
-      <td className="items-table__calc">{fmtShort(pricing.unitPrice)}</td>
       <td className="items-table__calc">{fmtShort(pricing.gstAmount)}</td>
       <td className="items-table__calc items-table__calc--total">
         {pricing.grandTotal > 0 ? fmtShort(pricing.grandTotal) : "—"}
@@ -344,18 +328,10 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
       </td>
       <td>
         <FileUploadField
-          label="File"
+          label="Attach"
           compact
           file={row.attachment}
           onChange={(file) => onPatch({ attachment: file })}
-        />
-      </td>
-      <td>
-        <FileUploadField
-          label="Sheet"
-          compact
-          file={row.datasheet}
-          onChange={(file) => onPatch({ datasheet: file })}
         />
       </td>
     </tr>
@@ -373,9 +349,9 @@ function GrandTotalPreview({ currency, lineItems, lineRows }) {
 
   lineItems.forEach((line, i) => {
     const row = lineRows[i] || {};
-    const pricing = calcLinePricing({
-      totalAmount: row.totalAmount,
-      gstPct: row.gst,
+    const pricing = calcLineFromUnitPrice({
+      unitPrice: row.unitPrice,
+      gstPct: DEFAULT_GST,
       quantity: line.quantity,
     });
     subtotal += pricing.subtotal;
@@ -387,8 +363,8 @@ function GrandTotalPreview({ currency, lineItems, lineRows }) {
 
   return (
     <div className="total-preview">
-      <span>Subtotal (ex-GST): {fmtMoney(subtotal, currency)}</span>
-      <span>GST total: {fmtMoney(totalGst, currency)}</span>
+      <span>Subtotal: {fmtMoney(subtotal, currency)}</span>
+      <span>GST: {fmtMoney(totalGst, currency)}</span>
       <strong>Grand total: {fmtMoney(grandTotal, currency)}</strong>
     </div>
   );

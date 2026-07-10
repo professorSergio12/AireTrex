@@ -1,7 +1,7 @@
 /*
  * Reads RFQ context from the URL query string.
  * Supports:
- *   - Multi-item vendor link: item_ids, products, quantities, units (pipe-separated)
+ *   - Multi-item vendor link: item_ids, products, quantities, units, descriptions (pipe-separated)
  *   - Legacy single-item link: item_id, product, qty, unit
  */
 function splitPipe(value) {
@@ -9,12 +9,39 @@ function splitPipe(value) {
   return String(value).split("|");
 }
 
+function decodeDescriptionPart(part, isBase64) {
+  const trimmed = (part || "").trim();
+  if (!trimmed) return "";
+  if (!isBase64) return trimmed;
+  try {
+    const bin = atob(trimmed);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return trimmed;
+  }
+}
+
 function buildItemsFromPipes(p) {
   const ids = splitPipe(p.get("item_ids"));
   const products = splitPipe(p.get("products"));
   const quantities = splitPipe(p.get("quantities"));
   const units = splitPipe(p.get("units"));
-  const count = Math.max(ids.length, products.length, quantities.length, units.length);
+  const isDescB64 = p.get("desc_b64") === "1";
+  const descriptions = splitPipe(p.get("descriptions")).map((part) =>
+    decodeDescriptionPart(part, isDescB64)
+  );
+  const vendorRids = splitPipe(p.get("vendor_rids"));
+  const vendorIds = splitPipe(p.get("vendor_ids"));
+  const count = Math.max(
+    ids.length,
+    products.length,
+    quantities.length,
+    units.length,
+    descriptions.length,
+    vendorRids.length,
+    vendorIds.length
+  );
   if (!count) return [];
 
   const items = [];
@@ -23,8 +50,11 @@ function buildItemsFromPipes(p) {
     const product = (products[i] || "").trim();
     const quantity = (quantities[i] || "").trim();
     const unit = (units[i] || "").trim();
+    const description = (descriptions[i] || "").trim();
+    const vendorRecordId = (vendorRids[i] || "").trim();
+    const vendorId = (vendorIds[i] || "").trim();
     if (!itemId && !product) continue;
-    items.push({ itemId, product, quantity, unit });
+    items.push({ itemId, product, quantity, unit, description, vendorRecordId, vendorId });
   }
   return items;
 }
@@ -80,6 +110,7 @@ export function resolveLineItems(params) {
         product: params.product,
         quantity: params.quantity,
         unit: params.unit,
+        description: params.description || "",
       },
     ];
   }

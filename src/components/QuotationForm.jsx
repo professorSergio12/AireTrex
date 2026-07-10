@@ -15,8 +15,8 @@ import { SuccessScreen } from "./SuccessScreen";
 const DEFAULT_GST = 18;
 
 function initialLineRows(lineItems) {
-  return lineItems.map(() => ({
-    description: "",
+  return lineItems.map((line) => ({
+    description: line.description || "",
     deliveryDate: "",
     unitPrice: "",
     gst: String(DEFAULT_GST),
@@ -88,6 +88,8 @@ export function QuotationForm() {
         product: line.product,
         quantity: line.quantity,
         unit: line.unit,
+        vendorRecordId: line.vendorRecordId || rfq.vendorRecordId || "",
+        vendorId: line.vendorId || rfq.vendorId || "",
         description: row.description || "",
         deliveryDate: row.deliveryDate || "",
         totalAmount: String(pricing.grandTotal),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CONFIG } from "../config";
 import { getRfqParams, resolveLineItems, resolveUid } from "../utils/params";
 import {
@@ -275,6 +275,33 @@ export function QuotationForm() {
   );
 }
 
+function DescriptionField({ value, onChange }) {
+  const ref = useRef(null);
+
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    resize();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="input input--compact input--cell textarea textarea--description"
+      placeholder="Description"
+      value={value}
+      rows={1}
+      onChange={(e) => onChange(e.target.value)}
+      onInput={resize}
+    />
+  );
+}
+
 function ItemTableRow({ index, line, row, errors, onPatch }) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
@@ -295,12 +322,10 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
         <strong>{line.product || "—"}</strong>
       </td>
       <td className="items-table__qty">{qtyLabel(line)}</td>
-      <td>
-        <input
-          className="input input--compact input--cell"
-          placeholder="Description"
+      <td className="items-table__desc">
+        <DescriptionField
           value={row.description}
-          onChange={(e) => onPatch({ description: e.target.value })}
+          onChange={(description) => onPatch({ description })}
         />
       </td>
       <td>

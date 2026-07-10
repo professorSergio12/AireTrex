@@ -160,7 +160,7 @@ select.input { appearance: auto; }
   padding: 8px 6px;
   border-bottom: 1px solid var(--line);
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .items-table th {
@@ -188,6 +188,22 @@ select.input { appearance: auto; }
   white-space: nowrap;
   font-size: 11px;
   color: var(--ink-soft);
+  vertical-align: middle;
+}
+
+.items-table--quote .items-table__desc {
+  width: 22%;
+  min-width: 160px;
+}
+
+.textarea--description {
+  overflow: hidden;
+  resize: none;
+  min-height: 34px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  field-sizing: content;
 }
 
 .items-table__calc {

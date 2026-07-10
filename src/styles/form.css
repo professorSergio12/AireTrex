@@ -167,9 +167,9 @@ select.input { appearance: auto; }
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: var(--muted);
+  color: #000000;
   white-space: nowrap;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .items-table--quote .items-table__product {

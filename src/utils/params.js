@@ -9,14 +9,11 @@ function splitPipe(value) {
   return String(value).split("|");
 }
 
-function decodeDescriptionPart(part, isBase64) {
+function decodeDescriptionPart(part) {
   const trimmed = (part || "").trim();
   if (!trimmed) return "";
-  if (!isBase64) return trimmed;
   try {
-    const bin = atob(trimmed);
-    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-    return new TextDecoder().decode(bytes);
+    return decodeURIComponent(trimmed.replace(/\+/g, " "));
   } catch {
     return trimmed;
   }
@@ -27,9 +24,8 @@ function buildItemsFromPipes(p) {
   const products = splitPipe(p.get("products"));
   const quantities = splitPipe(p.get("quantities"));
   const units = splitPipe(p.get("units"));
-  const isDescB64 = p.get("desc_b64") === "1";
   const descriptions = splitPipe(p.get("descriptions")).map((part) =>
-    decodeDescriptionPart(part, isDescB64)
+    decodeDescriptionPart(part)
   );
   const vendorRids = splitPipe(p.get("vendor_rids"));
   const vendorIds = splitPipe(p.get("vendor_ids"));

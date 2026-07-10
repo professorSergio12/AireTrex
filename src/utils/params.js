@@ -9,31 +9,14 @@ function splitPipe(value) {
   return String(value).split("|");
 }
 
-function fixCharSpacedText(text) {
-  const trimmed = (text || "").trim();
-  if (!trimmed) return "";
-
-  // Deluge sometimes returns "h e l l o" (space after every character).
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length < 3) return trimmed;
-
-  const singleChars = parts.filter((p) => p.length === 1).length;
-  if (singleChars / parts.length >= 0.75) {
-    return parts.join("");
-  }
-  return trimmed;
-}
-
 function decodeDescriptionPart(part) {
   const trimmed = (part || "").trim();
   if (!trimmed) return "";
-  let decoded = trimmed;
   try {
-    decoded = decodeURIComponent(trimmed.replace(/\+/g, " "));
+    return decodeURIComponent(trimmed.replace(/\+/g, " "));
   } catch {
-    decoded = trimmed;
+    return trimmed;
   }
-  return fixCharSpacedText(decoded);
 }
 
 function buildItemsFromPipes(p) {

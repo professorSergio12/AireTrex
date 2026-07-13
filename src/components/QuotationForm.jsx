@@ -149,17 +149,20 @@ export function QuotationForm() {
 
   return (
     <div className="page page--wide">
-      <header className="brand">
-        <div className="brand__logo">AT</div>
-        <div>
-          <h1>Quotation Form</h1>
-          <p>
-            {multiItem
-              ? `Quote ${lineItems.length} items in one submission`
-              : "Fill quote details for the requested item"}
-          </p>
+      <header className="page-hero">
+        <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div>
+        <div className="brand">
+          <div className="brand__logo">AT</div>
+          <div>
+            <h1>Quotation Form</h1>
+            <p>
+              {multiItem
+                ? `Quote ${lineItems.length} items in one submission`
+                : "Fill quote details for the requested item"}
+            </p>
+          </div>
+          {CONFIG.MOCK_MODE && <span className="mock-pill">DEMO MODE</span>}
         </div>
-        {CONFIG.MOCK_MODE && <span className="mock-pill">DEMO MODE</span>}
       </header>
 
       {!linkValid && (

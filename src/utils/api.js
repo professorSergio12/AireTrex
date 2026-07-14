@@ -2,7 +2,7 @@ import { CONFIG } from "../config";
 
 /*
  * Submits vendor quotation to quotation-backend.
- * Supports per-item files: attachment_0, datasheet_0, attachment_1, ...
+ * Parent-level multi files: attachment, datasheet (repeat field name per file).
  */
 export async function submitQuotation(payload, files = {}) {
   if (CONFIG.MOCK_MODE) {
@@ -17,8 +17,12 @@ export async function submitQuotation(payload, files = {}) {
   Object.entries(payload).forEach(([k, v]) => {
     fd.append(k, v == null ? "" : String(v));
   });
-  Object.entries(files).forEach(([k, file]) => {
-    if (file) fd.append(k, file);
+
+  (files.attachment || []).forEach((file) => {
+    if (file) fd.append("attachment", file);
+  });
+  (files.datasheet || []).forEach((file) => {
+    if (file) fd.append("datasheet", file);
   });
 
   const res = await fetch(CONFIG.BACKEND_URL, {
@@ -37,16 +41,12 @@ export async function submitQuotation(payload, files = {}) {
     if (result.uploadWarning) {
       console.warn("Quotation saved but file upload failed:", result.uploadWarning, result.uploads);
     }
-    if (result.fileUrlWarning) {
-      console.warn("Filepath fields not saved in Creator:", result.fileUrlWarning, result.uploads);
-    }
     return {
       ok: true,
       uniqueId: payload.uniqueId,
       recordId: result.recordId,
       quotationVersion: result.quotationVersion || null,
       uploadWarning: result.uploadWarning || null,
-      fileUrlWarning: result.fileUrlWarning || null,
     };
   }
 

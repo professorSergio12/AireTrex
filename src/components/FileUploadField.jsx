@@ -1,7 +1,34 @@
 import { useId } from "react";
 
-export function FileUploadField({ label, file, onChange, accept, compact = false }) {
+export function FileUploadField({
+  label,
+  file = null,
+  files = null,
+  onChange,
+  accept,
+  compact = false,
+  multiple = false,
+}) {
   const id = useId();
+  const selectedFiles = multiple ? files || [] : file ? [file] : [];
+  const hasFiles = selectedFiles.length > 0;
+
+  function handleChange(e) {
+    const picked = Array.from(e.target.files || []);
+    if (multiple) {
+      onChange(picked);
+      return;
+    }
+    onChange(picked[0] || null);
+  }
+
+  function clearFiles() {
+    onChange(multiple ? [] : null);
+  }
+
+  const summary = multiple
+    ? `${selectedFiles.length} file${selectedFiles.length === 1 ? "" : "s"}`
+    : selectedFiles[0]?.name;
 
   return (
     <div className={`file-upload ${compact ? "file-upload--compact" : ""}`}>
@@ -10,42 +37,46 @@ export function FileUploadField({ label, file, onChange, accept, compact = false
         className="file-upload__input"
         type="file"
         accept={accept}
-        onChange={(e) => onChange(e.target.files?.[0] || null)}
+        multiple={multiple}
+        onChange={handleChange}
       />
       <label
         htmlFor={id}
-        className={`file-upload__btn ${file ? "file-upload__btn--done" : ""}`}
-        title={file ? file.name : label}
+        className={`file-upload__btn ${hasFiles ? "file-upload__btn--done" : ""}`}
+        title={hasFiles ? summary : label}
       >
-        {file ? (
+        {hasFiles ? (
           <>
             <span className="file-upload__check" aria-hidden="true">
               ✓
             </span>
-            <span className="file-upload__name">{compact ? "Added" : file.name}</span>
+            <span className="file-upload__name">{compact ? "Added" : summary}</span>
           </>
         ) : (
           <>+ {label}</>
         )}
       </label>
-      {file && !compact && (
-        <button
-          type="button"
-          className="file-upload__clear"
-          onClick={() => onChange(null)}
-        >
+      {hasFiles && !compact && (
+        <button type="button" className="file-upload__clear" onClick={clearFiles}>
           Remove
         </button>
       )}
-      {file && compact && (
+      {hasFiles && compact && (
         <button
           type="button"
           className="file-upload__clear file-upload__clear--icon"
-          onClick={() => onChange(null)}
-          title="Remove file"
+          onClick={clearFiles}
+          title="Remove files"
         >
           ×
         </button>
+      )}
+      {multiple && hasFiles && !compact && (
+        <ul className="file-upload__list">
+          {selectedFiles.map((f) => (
+            <li key={`${f.name}-${f.size}-${f.lastModified}`}>{f.name}</li>
+          ))}
+        </ul>
       )}
     </div>
   );

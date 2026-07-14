@@ -23,8 +23,6 @@ function initialLineRows(lineItems) {
     unitPrice: "",
     gst: String(DEFAULT_GST),
     remarks: "",
-    attachment: null,
-    datasheet: null,
   }));
 }
 
@@ -44,13 +42,14 @@ export function QuotationForm() {
     contactEmail: rfq.email || "",
     currency: rfq.currency || "INR",
     remarks: "",
+    attachments: [],
+    datasheets: [],
   });
   const [lineRows, setLineRows] = useState(() => initialLineRows(lineItems));
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [submittedVersion, setSubmittedVersion] = useState("");
-  const [softWarning, setSoftWarning] = useState("");
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -80,7 +79,6 @@ export function QuotationForm() {
     if (!validate()) return;
     setStatus("submitting");
     setErrMsg("");
-    setSoftWarning("");
 
     const items = lineItems.map((line, i) => {
       const row = lineRows[i] || {};
@@ -129,11 +127,10 @@ export function QuotationForm() {
       price: items[0]?.price || "",
     };
 
-    const files = {};
-    lineRows.forEach((row, i) => {
-      if (row.attachment) files[`attachment_${i}`] = row.attachment;
-      if (row.datasheet) files[`datasheet_${i}`] = row.datasheet;
-    });
+    const files = {
+      attachment: form.attachments,
+      datasheet: form.datasheets,
+    };
 
     try {
       const result = await submitQuotation(payload, files);
@@ -141,11 +138,6 @@ export function QuotationForm() {
         setErrMsg(`Quotation saved, but file upload failed: ${result.uploadWarning}`);
         setStatus("error");
         return;
-      }
-      if (result.fileUrlWarning) {
-        setSoftWarning(
-          "Your quotation was saved and files were uploaded, but the download link could not be stored in our system. The sourcing team can still access your files."
-        );
       }
       setSubmittedVersion(result.quotationVersion || "");
       setStatus("done");
@@ -163,12 +155,11 @@ export function QuotationForm() {
         uniqueId={uniqueId}
         itemCount={lineItems.length}
         quotationVersion={submittedVersion}
-        softWarning={softWarning}
       />
     );
   }
 
-  const hasFiles = lineRows.some((row) => row.attachment || row.datasheet);
+  const hasFiles = form.attachments.length > 0 || form.datasheets.length > 0;
   const submitting = status === "submitting";
 
   return (
@@ -259,8 +250,6 @@ export function QuotationForm() {
                   <th>GST %</th>
                   <th>Total</th>
                   <th>Remarks</th>
-                  <th>Attachment</th>
-                  <th>Datasheet</th>
                 </tr>
               </thead>
               <tbody>
@@ -278,6 +267,35 @@ export function QuotationForm() {
             </table>
           </div>
           <GrandTotalPreview currency={form.currency} lineItems={lineItems} lineRows={lineRows} />
+        </section>
+
+        <section className="card">
+          <h2 className="card__title">Documents</h2>
+          <p className="card__hint">
+            Upload quotation attachments and datasheets for this submission (optional, multiple files allowed).
+          </p>
+          <div className="grid grid-2 documents-grid">
+            <Field label="Attachments">
+              <FileUploadField
+                label="Add attachment"
+                multiple
+                files={form.attachments}
+                onChange={(attachments) =>
+                  setForm((f) => ({ ...f, attachments: attachments || [] }))
+                }
+              />
+            </Field>
+            <Field label="Datasheets">
+              <FileUploadField
+                label="Add datasheet"
+                multiple
+                files={form.datasheets}
+                onChange={(datasheets) =>
+                  setForm((f) => ({ ...f, datasheets: datasheets || [] }))
+                }
+              />
+            </Field>
+          </div>
         </section>
 
         <section className="card">
@@ -415,22 +433,6 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           placeholder="Notes"
           value={row.remarks}
           onChange={(e) => onPatch({ remarks: e.target.value })}
-        />
-      </td>
-      <td>
-        <FileUploadField
-          label="Attach"
-          compact
-          file={row.attachment}
-          onChange={(file) => onPatch({ attachment: file })}
-        />
-      </td>
-      <td>
-        <FileUploadField
-          label="Sheet"
-          compact
-          file={row.datasheet}
-          onChange={(file) => onPatch({ datasheet: file })}
         />
       </td>
     </tr>

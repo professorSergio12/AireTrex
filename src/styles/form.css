@@ -428,3 +428,20 @@ select.input { appearance: auto; }
 @keyframes submit-loader-spin {
   to { transform: rotate(360deg); }
 }
+
+.file-upload__list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.card__hint {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.documents-grid .file-upload {
+  width: 100%;
+}

@@ -272,7 +272,7 @@ export function QuotationForm() {
         <section className="card">
           <h2 className="card__title">Documents</h2>
           <p className="card__hint">
-            Upload quotation attachments and datasheets for this submission (optional, multiple files allowed).
+            Add one or more files per field. After the first file, use &quot;Add another&quot; to attach more.
           </p>
           <div className="grid grid-2 documents-grid">
             <Field label="Attachments">

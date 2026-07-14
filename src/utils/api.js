@@ -38,7 +38,7 @@ export async function submitQuotation(payload, files = {}) {
       console.warn("Quotation saved but file upload failed:", result.uploadWarning, result.uploads);
     }
     if (result.fileUrlWarning) {
-      console.warn("File_Upload_URL not saved in Creator:", result.fileUrlWarning, result.uploads);
+      console.warn("Filepath fields not saved in Creator:", result.fileUrlWarning, result.uploads);
     }
     return {
       ok: true,

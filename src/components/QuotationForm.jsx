@@ -11,6 +11,7 @@ import { submitQuotation } from "../utils/api";
 import { Field, ReadOnlyField } from "./Field";
 import { FileUploadField } from "./FileUploadField";
 import { SuccessScreen } from "./SuccessScreen";
+import { SubmitLoader } from "./SubmitLoader";
 
 const DEFAULT_GST = 18;
 
@@ -164,8 +165,20 @@ export function QuotationForm() {
     );
   }
 
+  const hasFiles = lineRows.some((row) => row.attachment || row.datasheet);
+  const submitting = status === "submitting";
+
   return (
     <div className="page page--wide">
+      {submitting && (
+        <SubmitLoader
+          message={
+            hasFiles
+              ? "Submitting quotation and uploading files…"
+              : "Submitting your quotation…"
+          }
+        />
+      )}
       <header className="page-hero">
         <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div>
         <div className="brand">
@@ -188,7 +201,7 @@ export function QuotationForm() {
         </div>
       )}
 
-      <form onSubmit={onSubmit} noValidate>
+      <form onSubmit={onSubmit} noValidate className={submitting ? "form--submitting" : ""}>
         <section className="card">
           <h2 className="card__title">RFQ Reference</h2>
           <div className="grid grid-3">
@@ -282,9 +295,9 @@ export function QuotationForm() {
           <button
             className="btn btn--primary"
             type="submit"
-            disabled={status === "submitting" || !linkValid}
+            disabled={submitting || !linkValid}
           >
-            {status === "submitting"
+            {submitting
               ? "Submitting…"
               : multiItem
                 ? `Submit Quotation (${lineItems.length} items)`

@@ -417,7 +417,7 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
 }
 
 function qtyLabel(line) {
-  if (!line.quantity) return "—";
+  if (line.quantity === "" || line.quantity == null) return "—";
   return `${line.quantity} ${line.unit || ""}`.trim();
 }
 

@@ -37,12 +37,16 @@ export async function submitQuotation(payload, files = {}) {
     if (result.uploadWarning) {
       console.warn("Quotation saved but file upload failed:", result.uploadWarning, result.uploads);
     }
+    if (result.fileUrlWarning) {
+      console.warn("File_Upload_URL not saved in Creator:", result.fileUrlWarning, result.uploads);
+    }
     return {
       ok: true,
       uniqueId: payload.uniqueId,
       recordId: result.recordId,
       quotationVersion: result.quotationVersion || null,
       uploadWarning: result.uploadWarning || null,
+      fileUrlWarning: result.fileUrlWarning || null,
     };
   }
 

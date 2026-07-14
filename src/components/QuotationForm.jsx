@@ -139,6 +139,11 @@ export function QuotationForm() {
         setStatus("error");
         return;
       }
+      if (result.fileUrlWarning) {
+        setErrMsg(`Quotation saved, but file link was not saved in Creator: ${result.fileUrlWarning}`);
+        setStatus("error");
+        return;
+      }
       setSubmittedVersion(result.quotationVersion || "");
       setStatus("done");
     } catch (err) {

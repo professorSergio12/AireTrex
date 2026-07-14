@@ -17,6 +17,7 @@ const DEFAULT_GST = 18;
 function initialLineRows(lineItems) {
   return lineItems.map((line) => ({
     description: line.description || "",
+    availableQuantity: "",
     deliveryDate: "",
     unitPrice: "",
     gst: String(DEFAULT_GST),
@@ -47,6 +48,7 @@ export function QuotationForm() {
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
+  const [submittedVersion, setSubmittedVersion] = useState("");
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -62,6 +64,9 @@ export function QuotationForm() {
     lineRows.forEach((row, i) => {
       if (!row.unitPrice || Number(row.unitPrice) <= 0) {
         e[`unitPrice_${i}`] = "Required";
+      }
+      if (row.availableQuantity === "" || row.availableQuantity == null || Number(row.availableQuantity) < 0) {
+        e[`availableQuantity_${i}`] = "Required";
       }
     });
     setErrors(e);
@@ -91,6 +96,7 @@ export function QuotationForm() {
         vendorRecordId: line.vendorRecordId || rfq.vendorRecordId || "",
         vendorId: line.vendorId || rfq.vendorId || "",
         description: row.description || "",
+        availableQuantity: row.availableQuantity,
         deliveryDate: row.deliveryDate || "",
         totalAmount: String(pricing.grandTotal),
         price: String(pricing.unitPrice),
@@ -133,6 +139,7 @@ export function QuotationForm() {
         setStatus("error");
         return;
       }
+      setSubmittedVersion(result.quotationVersion || "");
       setStatus("done");
     } catch (err) {
       console.error(err);
@@ -143,7 +150,12 @@ export function QuotationForm() {
 
   if (status === "done") {
     return (
-      <SuccessScreen rfq={rfq} uniqueId={uniqueId} itemCount={lineItems.length} />
+      <SuccessScreen
+        rfq={rfq}
+        uniqueId={uniqueId}
+        itemCount={lineItems.length}
+        quotationVersion={submittedVersion}
+      />
     );
   }
 
@@ -219,6 +231,7 @@ export function QuotationForm() {
                 <tr>
                   <th>Product</th>
                   <th>Qty</th>
+                  <th>Avail. Qty *</th>
                   <th>Description</th>
                   <th>Delivery</th>
                   <th>Unit Price *</th>
@@ -325,6 +338,17 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
         <strong>{line.product || "—"}</strong>
       </td>
       <td className="items-table__qty">{qtyLabel(line)}</td>
+      <td className="items-table__avail-qty">
+        <input
+          className={`input input--compact input--cell input--cell-narrow ${errors[`availableQuantity_${index}`] ? "input--error" : ""}`}
+          type="number"
+          min="0"
+          step="1"
+          placeholder="0"
+          value={row.availableQuantity}
+          onChange={(e) => onPatch({ availableQuantity: e.target.value })}
+        />
+      </td>
       <td className="items-table__desc">
         <DescriptionField
           value={row.description}

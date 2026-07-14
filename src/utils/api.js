@@ -41,6 +41,7 @@ export async function submitQuotation(payload, files = {}) {
       ok: true,
       uniqueId: payload.uniqueId,
       recordId: result.recordId,
+      quotationVersion: result.quotationVersion || null,
       uploadWarning: result.uploadWarning || null,
     };
   }

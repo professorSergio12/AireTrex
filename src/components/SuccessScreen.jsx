@@ -1,4 +1,4 @@
-export function SuccessScreen({ rfq, uniqueId, itemCount = 1 }) {
+export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion = "" }) {
   const multi = itemCount > 1;
   return (
     <div className="page">
@@ -43,6 +43,12 @@ export function SuccessScreen({ rfq, uniqueId, itemCount = 1 }) {
             <span>Reference</span>
             <strong>{uniqueId || "—"}</strong>
           </div>
+          {quotationVersion ? (
+            <div>
+              <span>Version</span>
+              <strong>{quotationVersion}</strong>
+            </div>
+          ) : null}
         </div>
         <p className="muted">You may now close this window.</p>
       </div>

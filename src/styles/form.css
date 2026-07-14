@@ -220,6 +220,12 @@ select.input { appearance: auto; }
   vertical-align: middle;
 }
 
+.items-table--quote .items-table__avail-qty {
+  width: 8%;
+  min-width: 72px;
+  vertical-align: middle;
+}
+
 .items-table--quote .items-table__desc {
   width: 22%;
   min-width: 160px;

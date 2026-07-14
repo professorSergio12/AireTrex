@@ -50,6 +50,7 @@ export function QuotationForm() {
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [submittedVersion, setSubmittedVersion] = useState("");
+  const [softWarning, setSoftWarning] = useState("");
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -79,6 +80,7 @@ export function QuotationForm() {
     if (!validate()) return;
     setStatus("submitting");
     setErrMsg("");
+    setSoftWarning("");
 
     const items = lineItems.map((line, i) => {
       const row = lineRows[i] || {};
@@ -141,9 +143,9 @@ export function QuotationForm() {
         return;
       }
       if (result.fileUrlWarning) {
-        setErrMsg(`Quotation saved, but file link was not saved in Creator: ${result.fileUrlWarning}`);
-        setStatus("error");
-        return;
+        setSoftWarning(
+          "Your quotation was saved and files were uploaded, but the download link could not be stored in our system. The sourcing team can still access your files."
+        );
       }
       setSubmittedVersion(result.quotationVersion || "");
       setStatus("done");
@@ -161,6 +163,7 @@ export function QuotationForm() {
         uniqueId={uniqueId}
         itemCount={lineItems.length}
         quotationVersion={submittedVersion}
+        softWarning={softWarning}
       />
     );
   }

@@ -1,4 +1,4 @@
-export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion = "" }) {
+export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion = "", softWarning = "" }) {
   const multi = itemCount > 1;
   return (
     <div className="page">
@@ -12,6 +12,7 @@ export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion =
           </div>
         </div>
       </header>
+      {softWarning ? <div className="alert alert--warn">{softWarning}</div> : null}
       <div className="card success">
         <div className="success__check">&#10003;</div>
         <h1>Thank you{rfq.vendorName ? `, ${rfq.vendorName}` : ""}</h1>

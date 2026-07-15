@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CONFIG } from "../config";
-import { getRfqParams, resolveLineItems, resolveUid } from "../utils/params";
+import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedQuantity } from "../utils/params";
 import {
   calcLineFromUnitPrice,
   fmtMoney,
@@ -29,7 +29,7 @@ function initialLineRows(lineItems) {
 
 export function QuotationForm() {
   const rfq = useMemo(() => getRfqParams(), []);
-  const lineItems = useMemo(() => resolveLineItems(rfq), [rfq]);
+  const [lineItems, setLineItems] = useState(() => resolveLineItems(rfq));
   const uniqueId = useMemo(() => resolveUid(rfq), [rfq]);
   const multiItem = lineItems.length > 1;
   const autoQuoteNumber = useMemo(
@@ -46,7 +46,7 @@ export function QuotationForm() {
     attachments: [],
     datasheets: [],
   });
-  const [lineRows, setLineRows] = useState(() => initialLineRows(lineItems));
+  const [lineRows, setLineRows] = useState(() => initialLineRows(resolveLineItems(rfq)));
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
@@ -63,6 +63,32 @@ export function QuotationForm() {
     : "";
   const submissionClosed = deadlineState.blocked;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    const base = resolveLineItems(rfq);
+    if (!rfq.rfqNumber || CONFIG.MOCK_MODE || !lineItemsNeedQuantity(base)) return undefined;
+
+    const params = new URLSearchParams();
+    if (rfq.rfqNumber) params.set("rfq_no", rfq.rfqNumber);
+    if (rfq.rfqRecordId) params.set("rfq_rid", rfq.rfqRecordId);
+
+    let cancelled = false;
+    fetch(`${CONFIG.LINE_ITEMS_URL}?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data?.ok || !Array.isArray(data.items) || !data.items.length) {
+          return;
+        }
+        const enriched = enrichLineItemsWithCatalog(base, data.items);
+        setLineItems(enriched);
+        setLineRows(initialLineRows(enriched));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rfq]);
 
   useEffect(() => {
     if (!rfq.rfqNumber || rfq.dueDate || CONFIG.MOCK_MODE) return undefined;

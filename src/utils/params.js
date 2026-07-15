@@ -4,12 +4,7 @@
  *   - Multi-item vendor link: item_ids, products, quantities, units, descriptions (pipe-separated)
  *   - Legacy single-item link: item_id, product, qty, unit
  */
-function splitPipe(value) {
-  if (!value) return [];
-  return String(value).split("|");
-}
-
-function decodeDescriptionPart(part) {
+function decodePipePart(part) {
   const trimmed = (part || "").trim();
   if (!trimmed) return "";
   try {
@@ -17,6 +12,15 @@ function decodeDescriptionPart(part) {
   } catch {
     return trimmed;
   }
+}
+
+function splitPipe(value) {
+  if (!value) return [];
+  return String(value).split("|").map(decodePipePart);
+}
+
+function decodeDescriptionPart(part) {
+  return decodePipePart(part);
 }
 
 function buildItemsFromPipes(p) {
@@ -112,4 +116,50 @@ export function resolveLineItems(params) {
     ];
   }
   return [];
+}
+
+function catalogEntryKey(entry) {
+  return String(entry?.itemId || entry?.rowId || "").trim();
+}
+
+/** Fill missing qty/product/unit from Creator RFQ_Products when URL params are incomplete. */
+export function enrichLineItemsWithCatalog(lineItems, catalog) {
+  if (!Array.isArray(lineItems) || !lineItems.length) return lineItems;
+  if (!Array.isArray(catalog) || !catalog.length) return lineItems;
+
+  const byId = new Map();
+  const byProduct = new Map();
+  catalog.forEach((entry) => {
+    const idKey = catalogEntryKey(entry);
+    if (idKey) byId.set(idKey, entry);
+    const product = (entry.product || "").trim().toLowerCase();
+    if (product) byProduct.set(product, entry);
+  });
+
+  return lineItems.map((line) => {
+    const idKey = String(line.itemId || "").trim();
+    const productKey = (line.product || "").trim().toLowerCase();
+    const hit =
+      (idKey && byId.get(idKey)) ||
+      (productKey && byProduct.get(productKey)) ||
+      null;
+    if (!hit) return line;
+
+    return {
+      ...line,
+      product: line.product || hit.product || "",
+      quantity:
+        line.quantity === "" || line.quantity == null
+          ? hit.quantity ?? line.quantity
+          : line.quantity,
+      unit: line.unit || hit.unit || "",
+      description: line.description || hit.description || "",
+    };
+  });
+}
+
+export function lineItemsNeedQuantity(lineItems) {
+  return (lineItems || []).some(
+    (line) => line.quantity === "" || line.quantity == null
+  );
 }

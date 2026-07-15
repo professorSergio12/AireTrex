@@ -8,6 +8,7 @@ import {
   todayIso,
 } from "../utils/quote";
 import { submitQuotation } from "../utils/api";
+import { formatDueDateDisplay, isDueDatePassed } from "../utils/deadline";
 import { Field, ReadOnlyField } from "./Field";
 import { FileUploadField } from "./FileUploadField";
 import { SuccessScreen } from "./SuccessScreen";
@@ -50,9 +51,48 @@ export function QuotationForm() {
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [submittedVersion, setSubmittedVersion] = useState("");
+  const [deadlineState, setDeadlineState] = useState({
+    loading: Boolean(rfq.rfqNumber && !rfq.dueDate),
+    dueDate: rfq.dueDate || "",
+    blocked: isDueDatePassed(rfq.dueDate),
+  });
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
+  const dueDateLabel = deadlineState.dueDate
+    ? formatDueDateDisplay(deadlineState.dueDate)
+    : "";
+  const submissionClosed = deadlineState.blocked;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    if (!rfq.rfqNumber || rfq.dueDate || CONFIG.MOCK_MODE) return undefined;
+
+    const params = new URLSearchParams();
+    if (rfq.rfqNumber) params.set("rfq_no", rfq.rfqNumber);
+    if (rfq.rfqRecordId) params.set("rfq_rid", rfq.rfqRecordId);
+
+    let cancelled = false;
+    fetch(`${CONFIG.DEADLINE_URL}?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data?.ok) return;
+        const dueDate = data.dueDate || "";
+        setDeadlineState({
+          loading: false,
+          dueDate,
+          blocked: dueDate ? !data.allowed : false,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDeadlineState((prev) => ({ ...prev, loading: false }));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rfq.rfqNumber, rfq.rfqRecordId, rfq.dueDate]);
 
   function patchLineRow(index, patch) {
     setLineRows((rows) =>
@@ -76,6 +116,7 @@ export function QuotationForm() {
 
   async function onSubmit(ev) {
     ev.preventDefault();
+    if (submissionClosed) return;
     if (!validate()) return;
     setStatus("submitting");
     setErrMsg("");
@@ -143,6 +184,13 @@ export function QuotationForm() {
       setStatus("done");
     } catch (err) {
       console.error(err);
+      if (err.code === "DUE_DATE_PASSED") {
+        setDeadlineState((prev) => ({
+          ...prev,
+          blocked: true,
+          dueDate: err.dueDate || prev.dueDate,
+        }));
+      }
       setErrMsg(err.message || "Something went wrong.");
       setStatus("error");
     }
@@ -195,6 +243,19 @@ export function QuotationForm() {
         </div>
       )}
 
+      {submissionClosed && (
+        <div className="alert alert--error">
+          The quotation due date{dueDateLabel ? ` (${dueDateLabel})` : ""} has passed. Submissions
+          are closed for this RFQ.
+        </div>
+      )}
+
+      {!submissionClosed && dueDateLabel && (
+        <div className="alert alert--info">
+          Please submit your quotation on or before <strong>{dueDateLabel}</strong>.
+        </div>
+      )}
+
       <form onSubmit={onSubmit} noValidate className={submitting ? "form--submitting" : ""}>
         <section className="card">
           <h2 className="card__title">RFQ Reference</h2>
@@ -205,6 +266,10 @@ export function QuotationForm() {
               value={multiItem ? `${lineItems.length} items` : lineItems[0]?.product}
             />
             <ReadOnlyField label="Vendor" value={rfq.vendorName || rfq.vendorId} />
+            <ReadOnlyField
+              label="Due Date"
+              value={deadlineState.loading ? "Checking…" : dueDateLabel || "—"}
+            />
           </div>
         </section>
 
@@ -316,7 +381,7 @@ export function QuotationForm() {
           <button
             className="btn btn--primary"
             type="submit"
-            disabled={submitting || !linkValid}
+            disabled={submitting || !linkValid || submissionClosed || deadlineState.loading}
           >
             {submitting
               ? "Submitting…"

@@ -11,8 +11,10 @@ export const CONFIG = {
 
   // URL of the quotation-backend proxy (see ../../quotation-backend).
   // Local dev: quotation-backend on PORT 8787 (npm run dev in quotation-backend/)
-  BACKEND_URL: "https://vendor-form-gpsx.onrender.com/api/quotations",
-  // BACKEND_URL: "http://localhost:8787/api/quotations",
+  // BACKEND_URL: "https://vendor-form-gpsx.onrender.com/api/quotations",
+  BACKEND_URL: "http://localhost:8787/api/quotations",
+  // DEADLINE_URL: "https://vendor-form-gpsx.onrender.com/api/rfq-deadline",
+  DEADLINE_URL: "http://localhost:8787/api/rfq-deadline",
 
   CURRENCIES: ["INR", "USD", "EUR", "GBP", "AED"],
 };

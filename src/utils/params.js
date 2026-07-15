@@ -79,6 +79,7 @@ export function getRfqParams() {
     unit: first?.unit || get("unit"),
     brand: get("brand"),
     spec: get("spec"),
+    dueDate: get("due_date"),
   };
 }
 

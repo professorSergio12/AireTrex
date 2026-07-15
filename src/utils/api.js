@@ -47,7 +47,17 @@ export async function submitQuotation(payload, files = {}) {
       recordId: result.recordId,
       quotationVersion: result.quotationVersion || null,
       uploadWarning: result.uploadWarning || null,
+      confirmationEmailWarning: result.confirmationEmailWarning || null,
     };
+  }
+
+  if (result.code === "DUE_DATE_PASSED") {
+    const err = new Error(
+      result.message || "The quotation due date has passed. Your submission was not saved."
+    );
+    err.code = "DUE_DATE_PASSED";
+    err.dueDate = result.dueDateDisplay || result.dueDate || null;
+    throw err;
   }
 
   console.error("Submission rejected:", result);

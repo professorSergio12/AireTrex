@@ -15,6 +15,7 @@ export const CONFIG = {
   // BACKEND_URL: "http://localhost:8787/api/quotations",
   DEADLINE_URL: "https://vendor-form-gpsx.onrender.com/api/rfq-deadline",
   // DEADLINE_URL: "http://localhost:8787/api/rfq-deadline",
+  LINE_ITEMS_URL: "https://vendor-form-gpsx.onrender.com/api/rfq-line-items",
   // LINE_ITEMS_URL: "http://localhost:8787/api/rfq-line-items",
 
   CURRENCIES: ["INR", "USD", "EUR", "GBP", "AED"],

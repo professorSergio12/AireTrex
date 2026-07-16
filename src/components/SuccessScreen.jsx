@@ -1,5 +1,15 @@
-export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion = "", softWarning = "" }) {
+export function SuccessScreen({
+  rfq,
+  uniqueId,
+  itemCount = 1,
+  lineItems = [],
+  quotationVersion = "",
+  softWarning = "",
+}) {
   const multi = itemCount > 1;
+  const primaryProduct =
+    (lineItems[0] && lineItems[0].product) || rfq.product || "the requested item";
+  const itemSummary = String(itemCount);
   return (
     <div className="page">
       <header className="page-hero">
@@ -26,7 +36,7 @@ export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion =
           ) : (
             <>
               {" "}
-              for <strong>{rfq.product || "the requested item"}</strong>
+              for <strong>{primaryProduct}</strong>
             </>
           )}{" "}
           has been received by the AiraTrex Sourcing Desk.
@@ -37,8 +47,8 @@ export function SuccessScreen({ rfq, uniqueId, itemCount = 1, quotationVersion =
             <strong>{rfq.rfqNumber || "—"}</strong>
           </div>
           <div>
-            <span>{multi ? "Items" : "Item"}</span>
-            <strong>{multi ? itemCount : rfq.itemId || "—"}</strong>
+            <span>Items</span>
+            <strong>{itemSummary}</strong>
           </div>
           <div>
             <span>Reference</span>

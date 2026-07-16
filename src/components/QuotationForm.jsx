@@ -228,6 +228,7 @@ export function QuotationForm() {
         rfq={rfq}
         uniqueId={uniqueId}
         itemCount={lineItems.length}
+        lineItems={lineItems}
         quotationVersion={submittedVersion}
       />
     );

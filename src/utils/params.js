@@ -31,6 +31,14 @@ function buildItemsFromPipes(p) {
   const descriptions = splitPipe(p.get("descriptions")).map((part) =>
     decodeDescriptionPart(part)
   );
+  const spec1s = splitPipe(p.get("spec_1s") || p.get("specs1"));
+  const spec2s = splitPipe(p.get("spec_2s") || p.get("specs2"));
+  const spec3s = splitPipe(p.get("spec_3s") || p.get("specs3"));
+  const spec4s = splitPipe(p.get("spec_4s") || p.get("specs4"));
+  const mainCategories = splitPipe(
+    p.get("main_categories") || p.get("main_categorys") || p.get("main_cats")
+  );
+  const productTypes = splitPipe(p.get("product_types") || p.get("product_type_s"));
   const vendorRids = splitPipe(p.get("vendor_rids"));
   const vendorIds = splitPipe(p.get("vendor_ids"));
   const count = Math.max(
@@ -39,6 +47,12 @@ function buildItemsFromPipes(p) {
     quantities.length,
     units.length,
     descriptions.length,
+    spec1s.length,
+    spec2s.length,
+    spec3s.length,
+    spec4s.length,
+    mainCategories.length,
+    productTypes.length,
     vendorRids.length,
     vendorIds.length
   );
@@ -51,10 +65,30 @@ function buildItemsFromPipes(p) {
     const quantity = (quantities[i] || "").trim();
     const unit = (units[i] || "").trim();
     const description = (descriptions[i] || "").trim();
+    const spec1 = (spec1s[i] || "").trim();
+    const spec2 = (spec2s[i] || "").trim();
+    const spec3 = (spec3s[i] || "").trim();
+    const spec4 = (spec4s[i] || "").trim();
+    const mainCategory = (mainCategories[i] || "").trim();
+    const productType = (productTypes[i] || "").trim();
     const vendorRecordId = (vendorRids[i] || "").trim();
     const vendorId = (vendorIds[i] || "").trim();
     if (!itemId && !product) continue;
-    items.push({ itemId, product, quantity, unit, description, vendorRecordId, vendorId });
+    items.push({
+      itemId,
+      product,
+      quantity,
+      unit,
+      description,
+      spec1,
+      spec2,
+      spec3,
+      spec4,
+      mainCategory,
+      productType,
+      vendorRecordId,
+      vendorId,
+    });
   }
   return items;
 }
@@ -83,6 +117,14 @@ export function getRfqParams() {
     unit: first?.unit || get("unit"),
     brand: get("brand"),
     spec: get("spec"),
+    spec1: first?.spec1 || get("spec_1") || get("spec1") || get("spec"),
+    spec2: first?.spec2 || get("spec_2") || get("spec2"),
+    spec3: first?.spec3 || get("spec_3") || get("spec3"),
+    spec4: first?.spec4 || get("spec_4") || get("spec4"),
+    mainCategory:
+      first?.mainCategory || get("main_category") || get("mainCategory") || "",
+    productType:
+      first?.productType || get("product_type") || get("productType") || "",
     dueDate: get("due_date"),
   };
 }
@@ -112,6 +154,12 @@ export function resolveLineItems(params) {
         quantity: params.quantity,
         unit: params.unit,
         description: params.description || "",
+        spec1: params.spec1 || "",
+        spec2: params.spec2 || "",
+        spec3: params.spec3 || "",
+        spec4: params.spec4 || "",
+        mainCategory: params.mainCategory || "",
+        productType: params.productType || "",
       },
     ];
   }
@@ -154,6 +202,12 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
           : line.quantity,
       unit: line.unit || hit.unit || "",
       description: line.description || hit.description || "",
+      spec1: line.spec1 || hit.spec1 || "",
+      spec2: line.spec2 || hit.spec2 || "",
+      spec3: line.spec3 || hit.spec3 || "",
+      spec4: line.spec4 || hit.spec4 || "",
+      mainCategory: line.mainCategory || hit.mainCategory || "",
+      productType: line.productType || hit.productType || "",
     };
   });
 }
@@ -162,4 +216,18 @@ export function lineItemsNeedQuantity(lineItems) {
   return (lineItems || []).some(
     (line) => line.quantity === "" || line.quantity == null
   );
+}
+
+/** True when qty / specs / category fields missing — fetch RFQ_Products to prefill. */
+export function lineItemsNeedCatalogEnrichment(lineItems) {
+  return (lineItems || []).some((line) => {
+    if (line.quantity === "" || line.quantity == null) return true;
+    if (!String(line.spec1 || "").trim()) return true;
+    if (!String(line.spec2 || "").trim()) return true;
+    if (!String(line.spec3 || "").trim()) return true;
+    if (!String(line.spec4 || "").trim()) return true;
+    if (!String(line.mainCategory || "").trim()) return true;
+    if (!String(line.productType || "").trim()) return true;
+    return false;
+  });
 }

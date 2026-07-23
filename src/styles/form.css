@@ -197,7 +197,7 @@ select.input { appearance: auto; }
 .items-table td {
   padding: 10px 10px;
   border-bottom: 1px solid var(--line);
-  text-align: left;
+  text-align: center;
   vertical-align: top;
 }
 
@@ -208,6 +208,13 @@ select.input { appearance: auto; }
   color: #000000;
   white-space: nowrap;
   font-weight: 700;
+}
+
+.items-table--quote .input,
+.items-table--quote .textarea,
+.items-table--quote input,
+.items-table--quote textarea {
+  text-align: center;
 }
 
 .items-table--quote .items-table__product {
@@ -276,7 +283,6 @@ select.input { appearance: auto; }
 .items-table--quote .items-table__total .input--locked {
   font-weight: 700;
   color: var(--ink);
-  text-align: center;
 }
 
 .items-table--quote .items-table__remarks {

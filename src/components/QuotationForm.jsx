@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CONFIG } from "../config";
-import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedQuantity } from "../utils/params";
+import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedCatalogEnrichment } from "../utils/params";
 import {
   calcLineFromUnitPrice,
   fmtMoney,
@@ -16,9 +16,24 @@ import { SubmitLoader } from "./SubmitLoader";
 
 const DEFAULT_GST = 18;
 
+function normalizeProductName(value) {
+  return String(value ?? "").trim();
+}
+
+function productsEqual(a, b) {
+  return normalizeProductName(a).toLowerCase() === normalizeProductName(b).toLowerCase();
+}
+
 function initialLineRows(lineItems) {
   return lineItems.map((line) => ({
+    product: line.product || "",
     description: line.description || "",
+    mainCategory: line.mainCategory || "",
+    productType: line.productType || "",
+    spec1: line.spec1 || "",
+    spec2: line.spec2 || "",
+    spec3: line.spec3 || "",
+    spec4: line.spec4 || "",
     availableQuantity: "",
     deliveryDate: "",
     unitPrice: "",
@@ -66,7 +81,9 @@ export function QuotationForm() {
 
   useEffect(() => {
     const base = resolveLineItems(rfq);
-    if (!rfq.rfqNumber || CONFIG.MOCK_MODE || !lineItemsNeedQuantity(base)) return undefined;
+    if (!rfq.rfqNumber || CONFIG.MOCK_MODE || !lineItemsNeedCatalogEnrichment(base)) {
+      return undefined;
+    }
 
     const params = new URLSearchParams();
     if (rfq.rfqNumber) params.set("rfq_no", rfq.rfqNumber);
@@ -129,6 +146,9 @@ export function QuotationForm() {
   function validate() {
     const e = {};
     lineRows.forEach((row, i) => {
+      if (!normalizeProductName(row.product)) {
+        e[`product_${i}`] = "Required";
+      }
       if (!row.unitPrice || Number(row.unitPrice) <= 0) {
         e[`unitPrice_${i}`] = "Required";
       }
@@ -155,15 +175,28 @@ export function QuotationForm() {
         quantity: line.quantity,
       });
 
+      const originalProduct = normalizeProductName(line.product);
+      const product = normalizeProductName(row.product) || originalProduct;
+      const productEdited = !productsEqual(product, originalProduct);
+
       return {
         itemId: line.itemId,
         itemMasterId: line.itemId,
-        product: line.product,
+        product,
+        originalProduct,
+        productEdited,
+        actualProductName: productEdited ? product : "",
         quantity: line.quantity,
         unit: line.unit,
         vendorRecordId: line.vendorRecordId || rfq.vendorRecordId || "",
         vendorId: line.vendorId || rfq.vendorId || "",
         description: row.description || "",
+        mainCategory: row.mainCategory || "",
+        productType: row.productType || "",
+        spec1: row.spec1 || "",
+        spec2: row.spec2 || "",
+        spec3: row.spec3 || "",
+        spec4: row.spec4 || "",
         availableQuantity: row.availableQuantity,
         deliveryDate: row.deliveryDate || "",
         totalAmount: String(pricing.grandTotal),
@@ -337,6 +370,12 @@ export function QuotationForm() {
                   <th>Qty</th>
                   <th>Avail. Qty *</th>
                   <th>Description</th>
+                  <th>Main Category</th>
+                  <th>Product Type</th>
+                  <th>Spec 1</th>
+                  <th>Spec 2</th>
+                  <th>Spec 3</th>
+                  <th>Spec 4</th>
                   <th>Delivery</th>
                   <th>Unit Price *</th>
                   <th>GST %</th>
@@ -422,7 +461,7 @@ export function QuotationForm() {
   );
 }
 
-function DescriptionField({ value, onChange }) {
+function DescriptionField({ value, onChange, placeholder = "Description", className = "", error = false, "aria-label": ariaLabel }) {
   const ref = useRef(null);
 
   const resize = () => {
@@ -439,10 +478,12 @@ function DescriptionField({ value, onChange }) {
   return (
     <textarea
       ref={ref}
-      className="input input--compact input--cell textarea textarea--description"
-      placeholder="Description"
+      className={`input input--compact input--cell textarea textarea--description ${error ? "input--error" : ""} ${className}`.trim()}
+      placeholder={placeholder}
       value={value}
       rows={1}
+      title={value || undefined}
+      aria-label={ariaLabel}
       onChange={(e) => onChange(e.target.value)}
       onInput={resize}
     />
@@ -462,11 +503,19 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
       : "—";
 
   const showTotal = Number(row.unitPrice) > 0;
+  const productValue = row.product ?? line.product ?? "";
 
   return (
     <tr>
       <td className="items-table__product">
-        <strong>{line.product || "—"}</strong>
+        <DescriptionField
+          className="textarea--product"
+          placeholder="Product name"
+          value={productValue}
+          error={Boolean(errors[`product_${index}`])}
+          aria-label={`Product ${index + 1}`}
+          onChange={(product) => onPatch({ product })}
+        />
       </td>
       <td className="items-table__qty">{qtyLabel(line)}</td>
       <td className="items-table__avail-qty">
@@ -486,7 +535,67 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           onChange={(description) => onPatch({ description })}
         />
       </td>
-      <td>
+      <td className="items-table__cat">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Main Category"
+          value={row.mainCategory ?? line.mainCategory ?? ""}
+          onChange={(e) => onPatch({ mainCategory: e.target.value })}
+          aria-label={`Main Category row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__type">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Product Type"
+          value={row.productType ?? line.productType ?? ""}
+          onChange={(e) => onPatch({ productType: e.target.value })}
+          aria-label={`Product Type row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__spec">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Spec 1"
+          value={row.spec1 ?? line.spec1 ?? ""}
+          onChange={(e) => onPatch({ spec1: e.target.value })}
+          aria-label={`Spec 1 row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__spec">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Spec 2"
+          value={row.spec2 ?? line.spec2 ?? ""}
+          onChange={(e) => onPatch({ spec2: e.target.value })}
+          aria-label={`Spec 2 row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__spec">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Spec 3"
+          value={row.spec3 ?? line.spec3 ?? ""}
+          onChange={(e) => onPatch({ spec3: e.target.value })}
+          aria-label={`Spec 3 row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__spec">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Spec 4"
+          value={row.spec4 ?? line.spec4 ?? ""}
+          onChange={(e) => onPatch({ spec4: e.target.value })}
+          aria-label={`Spec 4 row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__delivery">
         <input
           className="input input--compact input--cell"
           type="date"
@@ -494,7 +603,7 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           onChange={(e) => onPatch({ deliveryDate: e.target.value })}
         />
       </td>
-      <td>
+      <td className="items-table__price">
         <input
           className={`input input--compact input--cell ${errors[`unitPrice_${index}`] ? "input--error" : ""}`}
           type="number"
@@ -505,7 +614,7 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           onChange={(e) => onPatch({ unitPrice: e.target.value })}
         />
       </td>
-      <td>
+      <td className="items-table__gst">
         <input
           className="input input--compact input--cell input--cell-narrow"
           type="number"
@@ -516,10 +625,17 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           onChange={(e) => onPatch({ gst: e.target.value })}
         />
       </td>
-      <td className="items-table__calc items-table__calc--total">
-        {showTotal ? fmtShort(pricing.grandTotal) : "—"}
+      <td className="items-table__total">
+        <input
+          className="input input--compact input--cell input--locked"
+          type="text"
+          readOnly
+          tabIndex={-1}
+          value={showTotal ? fmtShort(pricing.grandTotal) : "—"}
+          aria-label={`Total row ${index + 1}`}
+        />
       </td>
-      <td>
+      <td className="items-table__remarks">
         <input
           className="input input--compact input--cell"
           placeholder="Notes"

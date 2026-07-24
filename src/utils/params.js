@@ -4,6 +4,28 @@
  *   - Multi-item vendor link: item_ids, products, quantities, units, descriptions (pipe-separated)
  *   - Legacy single-item link: item_id, product, qty, unit
  */
+/**
+ * Fixes "T e s t" / "B a r  b o t t o m" style text from bad URL encoding.
+ * Only collapses when most space-separated tokens are single characters.
+ */
+export function isSpacedOutText(text) {
+  const parts = String(text ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 3) return false;
+  const singleChar = parts.filter((p) => p.length === 1).length;
+  return singleChar / parts.length >= 0.6;
+}
+
+export function normalizeSpacedText(text) {
+  const s = String(text ?? "").trim();
+  if (!s || !isSpacedOutText(s)) return s;
+
+  let out = s;
+  while (/\S \S/.test(out)) {
+    out = out.replace(/(\S) (\S)/g, "$1$2");
+  }
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
 function decodePipePart(part) {
   const trimmed = (part || "").trim();
   if (!trimmed) return "";
@@ -193,6 +215,9 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       null;
     if (!hit) return line;
 
+    const rawLineDesc = line.description || "";
+    const hitDesc = normalizeSpacedText(hit.description || "");
+
     return {
       ...line,
       product: line.product || hit.product || "",
@@ -201,7 +226,8 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
           ? hit.quantity ?? line.quantity
           : line.quantity,
       unit: line.unit || hit.unit || "",
-      description: line.description || hit.description || "",
+      // Prefer Creator description when present (URL encoding often mangles it).
+      description: hitDesc || normalizeSpacedText(rawLineDesc) || "",
       spec1: line.spec1 || hit.spec1 || "",
       spec2: line.spec2 || hit.spec2 || "",
       spec3: line.spec3 || hit.spec3 || "",
@@ -222,6 +248,8 @@ export function lineItemsNeedQuantity(lineItems) {
 export function lineItemsNeedCatalogEnrichment(lineItems) {
   return (lineItems || []).some((line) => {
     if (line.quantity === "" || line.quantity == null) return true;
+    // Spaced-out descriptions usually come from URL encoding; refetch clean text from Creator.
+    if (isSpacedOutText(line.description)) return true;
     if (!String(line.spec1 || "").trim()) return true;
     if (!String(line.spec2 || "").trim()) return true;
     if (!String(line.spec3 || "").trim()) return true;

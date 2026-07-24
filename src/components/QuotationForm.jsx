@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CONFIG } from "../config";
-import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedCatalogEnrichment } from "../utils/params";
+import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedCatalogEnrichment, normalizeSpacedText } from "../utils/params";
 import {
   calcLineFromUnitPrice,
   fmtMoney,
@@ -27,7 +27,7 @@ function productsEqual(a, b) {
 function initialLineRows(lineItems) {
   return lineItems.map((line) => ({
     product: line.product || "",
-    description: line.description || "",
+    description: normalizeSpacedText(line.description || ""),
     mainCategory: line.mainCategory || "",
     productType: line.productType || "",
     spec1: line.spec1 || "",
@@ -649,7 +649,7 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
 
 function qtyLabel(line) {
   if (line.quantity === "" || line.quantity == null) return "—";
-  return `${line.quantity} ${line.unit || ""}`.trim();
+  return String(line.quantity);
 }
 
 function GrandTotalPreview({ currency, lineItems, lineRows }) {

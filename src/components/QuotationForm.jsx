@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CONFIG } from "../config";
-import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, lineItemsNeedCatalogEnrichment, normalizeSpacedText } from "../utils/params";
+import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, normalizeSpacedText } from "../utils/params";
 import {
   calcLineFromUnitPrice,
   fmtMoney,
@@ -66,6 +66,7 @@ export function QuotationForm() {
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [submittedVersion, setSubmittedVersion] = useState("");
+  const removedItemIdsRef = useRef(new Set());
   const [deadlineState, setDeadlineState] = useState({
     loading: Boolean(rfq.rfqNumber && !rfq.dueDate),
     dueDate: rfq.dueDate || "",
@@ -79,9 +80,20 @@ export function QuotationForm() {
   const submissionClosed = deadlineState.blocked;
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  function removeLineItem(index) {
+    if (lineItems.length <= 1) return;
+    const id = String(lineItems[index]?.itemId || "").trim();
+    if (id) removedItemIdsRef.current.add(id);
+    setLineItems((items) => items.filter((_, i) => i !== index));
+    setLineRows((rows) => rows.filter((_, i) => i !== index));
+    setErrors({});
+  }
+
   useEffect(() => {
     const base = resolveLineItems(rfq);
-    if (!rfq.rfqNumber || CONFIG.MOCK_MODE || !lineItemsNeedCatalogEnrichment(base)) {
+    // Always pull Creator line items when RFQ is known so specs/category fill
+    // even if the email URL omitted them.
+    if (!rfq.rfqNumber || CONFIG.MOCK_MODE) {
       return undefined;
     }
 
@@ -94,13 +106,20 @@ export function QuotationForm() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled || !data?.ok || !Array.isArray(data.items) || !data.items.length) {
+          console.warn("[RFQ] line-items enrich skipped:", data?.reason || data?.message || "empty");
           return;
         }
-        const enriched = enrichLineItemsWithCatalog(base, data.items);
+        const enriched = enrichLineItemsWithCatalog(base, data.items).filter((line) => {
+          const id = String(line.itemId || "").trim();
+          return !id || !removedItemIdsRef.current.has(id);
+        });
+        if (!enriched.length) return;
         setLineItems(enriched);
         setLineRows(initialLineRows(enriched));
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("[RFQ] line-items enrich failed:", err?.message || err);
+      });
 
     return () => {
       cancelled = true;
@@ -185,7 +204,7 @@ export function QuotationForm() {
         product,
         originalProduct,
         productEdited,
-        actualProductName: productEdited ? product : "",
+        actualProductName: product,
         quantity: line.quantity,
         unit: line.unit,
         vendorRecordId: line.vendorRecordId || rfq.vendorRecordId || "",
@@ -362,25 +381,29 @@ export function QuotationForm() {
 
         <section className="card card--table">
           <h2 className="card__title">Items to Quote</h2>
+          <p className="card__hint">
+            If you do not stock an item, remove that row before submitting. At least one item is required.
+          </p>
           <div className="items-table-wrap">
             <table className="items-table items-table--quote">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Qty</th>
-                  <th>Avail. Qty *</th>
-                  <th>Description</th>
-                  <th>Main Category</th>
-                  <th>Product Type</th>
-                  <th>Spec 1</th>
-                  <th>Spec 2</th>
-                  <th>Spec 3</th>
-                  <th>Spec 4</th>
-                  <th>Delivery</th>
-                  <th>Unit Price *</th>
-                  <th>GST %</th>
-                  <th>Total</th>
-                  <th>Remarks</th>
+                  <th className="items-table__product">Actual Product Name</th>
+                  <th className="items-table__qty">Qty</th>
+                  <th className="items-table__avail-qty">Avail. Qty *</th>
+                  <th className="items-table__desc">Description</th>
+                  <th className="items-table__cat">Main Category</th>
+                  <th className="items-table__type">Product Type</th>
+                  <th className="items-table__spec">Spec 1</th>
+                  <th className="items-table__spec">Spec 2</th>
+                  <th className="items-table__spec">Spec 3</th>
+                  <th className="items-table__spec">Spec 4</th>
+                  <th className="items-table__delivery">Delivery</th>
+                  <th className="items-table__price">Unit Price *</th>
+                  <th className="items-table__gst">GST %</th>
+                  <th className="items-table__total">Total</th>
+                  <th className="items-table__remarks">Remarks</th>
+                  <th className="items-table__remove" aria-label="Remove">Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -391,6 +414,8 @@ export function QuotationForm() {
                     line={line}
                     row={lineRows[i] || {}}
                     errors={errors}
+                    canRemove={lineItems.length > 1}
+                    onRemove={() => removeLineItem(i)}
                     onPatch={(patch) => patchLineRow(i, patch)}
                   />
                 ))}
@@ -490,7 +515,7 @@ function DescriptionField({ value, onChange, placeholder = "Description", classN
   );
 }
 
-function ItemTableRow({ index, line, row, errors, onPatch }) {
+function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
     gstPct: row.gst,
@@ -510,10 +535,10 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
       <td className="items-table__product">
         <DescriptionField
           className="textarea--product"
-          placeholder="Product name"
+          placeholder="Actual Product Name"
           value={productValue}
           error={Boolean(errors[`product_${index}`])}
-          aria-label={`Product ${index + 1}`}
+          aria-label={`Actual Product Name ${index + 1}`}
           onChange={(product) => onPatch({ product })}
         />
       </td>
@@ -642,6 +667,18 @@ function ItemTableRow({ index, line, row, errors, onPatch }) {
           value={row.remarks}
           onChange={(e) => onPatch({ remarks: e.target.value })}
         />
+      </td>
+      <td className="items-table__remove">
+        <button
+          type="button"
+          className="btn-remove-row"
+          disabled={!canRemove}
+          title={canRemove ? "Remove this item" : "At least one item is required"}
+          aria-label={`Remove item ${index + 1}`}
+          onClick={onRemove}
+        >
+          Remove
+        </button>
       </td>
     </tr>
   );

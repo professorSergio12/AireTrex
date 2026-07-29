@@ -188,11 +188,7 @@ export function resolveLineItems(params) {
   return [];
 }
 
-function catalogEntryKey(entry) {
-  return String(entry?.itemId || entry?.rowId || "").trim();
-}
-
-/** Fill missing qty/product/unit from Creator RFQ_Products when URL params are incomplete. */
+/** Fill missing qty/product/unit/specs from Creator RFQ_Products when URL params are incomplete. */
 export function enrichLineItemsWithCatalog(lineItems, catalog) {
   if (!Array.isArray(lineItems) || !lineItems.length) return lineItems;
   if (!Array.isArray(catalog) || !catalog.length) return lineItems;
@@ -200,27 +196,50 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
   const byId = new Map();
   const byProduct = new Map();
   catalog.forEach((entry) => {
-    const idKey = catalogEntryKey(entry);
-    if (idKey) byId.set(idKey, entry);
-    const product = (entry.product || "").trim().toLowerCase();
-    if (product) byProduct.set(product, entry);
+    const itemKey = String(entry?.itemId || "").trim();
+    const rowKey = String(entry?.rowId || "").trim();
+    if (itemKey) byId.set(itemKey, entry);
+    if (rowKey) byId.set(rowKey, entry);
+    for (const name of [entry.product, entry.productType]) {
+      const key = String(name || "").trim().toLowerCase();
+      if (key) byProduct.set(key, entry);
+    }
   });
 
-  return lineItems.map((line) => {
+  const usedCatalogIdx = new Set();
+
+  return lineItems.map((line, index) => {
     const idKey = String(line.itemId || "").trim();
     const productKey = (line.product || "").trim().toLowerCase();
-    const hit =
+    const productTypeKey = (line.productType || "").trim().toLowerCase();
+
+    let hit =
       (idKey && byId.get(idKey)) ||
       (productKey && byProduct.get(productKey)) ||
+      (productTypeKey && byProduct.get(productTypeKey)) ||
       null;
+
+    // Fallback: same order as RFQ_Products when IDs/names do not align with the email link.
+    if (!hit && index < catalog.length && !usedCatalogIdx.has(index)) {
+      hit = catalog[index];
+    }
     if (!hit) return line;
+
+    const hitIdx = catalog.indexOf(hit);
+    if (hitIdx >= 0) usedCatalogIdx.add(hitIdx);
 
     const rawLineDesc = line.description || "";
     const hitDesc = normalizeSpacedText(hit.description || "");
+    const pick = (lineVal, hitVal) => {
+      const fromLine = String(lineVal ?? "").trim();
+      const fromHit = String(hitVal ?? "").trim();
+      return fromLine || fromHit || "";
+    };
+    const catalogProduct = String(hit.product || hit.productType || "").trim();
 
     return {
       ...line,
-      product: line.product || hit.product || "",
+      product: line.product || catalogProduct || "",
       quantity:
         line.quantity === "" || line.quantity == null
           ? hit.quantity ?? line.quantity
@@ -228,12 +247,12 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       unit: line.unit || hit.unit || "",
       // Prefer Creator description when present (URL encoding often mangles it).
       description: hitDesc || normalizeSpacedText(rawLineDesc) || "",
-      spec1: line.spec1 || hit.spec1 || "",
-      spec2: line.spec2 || hit.spec2 || "",
-      spec3: line.spec3 || hit.spec3 || "",
-      spec4: line.spec4 || hit.spec4 || "",
-      mainCategory: line.mainCategory || hit.mainCategory || "",
-      productType: line.productType || hit.productType || "",
+      spec1: pick(line.spec1, hit.spec1),
+      spec2: pick(line.spec2, hit.spec2),
+      spec3: pick(line.spec3, hit.spec3),
+      spec4: pick(line.spec4, hit.spec4),
+      mainCategory: pick(line.mainCategory, hit.mainCategory),
+      productType: pick(line.productType, hit.productType),
     };
   });
 }
@@ -250,10 +269,10 @@ export function lineItemsNeedCatalogEnrichment(lineItems) {
     if (line.quantity === "" || line.quantity == null) return true;
     // Spaced-out descriptions usually come from URL encoding; refetch clean text from Creator.
     if (isSpacedOutText(line.description)) return true;
-    if (!String(line.spec1 || "").trim()) return true;
-    if (!String(line.spec2 || "").trim()) return true;
-    if (!String(line.spec3 || "").trim()) return true;
-    if (!String(line.spec4 || "").trim()) return true;
+    // Any missing catalog field → enrich (do not require all 4 specs to exist).
+    if (!String(line.spec1 || "").trim() && !String(line.spec2 || "").trim() && !String(line.spec3 || "").trim() && !String(line.spec4 || "").trim()) {
+      return true;
+    }
     if (!String(line.mainCategory || "").trim()) return true;
     if (!String(line.productType || "").trim()) return true;
     return false;

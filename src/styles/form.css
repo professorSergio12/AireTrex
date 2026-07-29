@@ -195,10 +195,10 @@ select.input { appearance: auto; }
 
 .items-table th,
 .items-table td {
-  padding: 10px 10px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--line);
   text-align: center;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .items-table th {
@@ -214,12 +214,17 @@ select.input { appearance: auto; }
 .items-table--quote .textarea,
 .items-table--quote input,
 .items-table--quote textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
   text-align: center;
 }
 
 .items-table--quote .items-table__product {
-  min-width: 240px;
-  width: 240px;
+  min-width: 220px;
+  width: 220px;
   word-break: break-word;
 }
 
@@ -239,29 +244,27 @@ select.input { appearance: auto; }
 .items-table--quote .items-table__qty {
   min-width: 56px;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink-soft);
-  vertical-align: top;
-  padding-top: 16px;
 }
 
 .items-table--quote .items-table__avail-qty {
   min-width: 88px;
-  vertical-align: top;
 }
 
 .items-table--quote .items-table__desc {
-  min-width: 200px;
-  width: 200px;
+  min-width: 180px;
+  width: 180px;
 }
 
 .items-table--quote .items-table__cat,
 .items-table--quote .items-table__type {
-  min-width: 130px;
+  min-width: 120px;
 }
 
 .items-table--quote .items-table__spec {
-  min-width: 110px;
+  min-width: 100px;
 }
 
 .items-table--quote .items-table__delivery {
@@ -286,7 +289,36 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__remarks {
-  min-width: 120px;
+  min-width: 110px;
+}
+
+.items-table--quote .items-table__remove {
+  min-width: 88px;
+}
+
+.btn-remove-row {
+  appearance: none;
+  display: inline-block;
+  border: 1px solid #d4d7dd;
+  background: #fff;
+  color: #8a2f2f;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-remove-row:hover:not(:disabled) {
+  background: #fdf2f2;
+  border-color: #e0b4b4;
+}
+
+.btn-remove-row:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--muted);
 }
 
 .textarea--description {

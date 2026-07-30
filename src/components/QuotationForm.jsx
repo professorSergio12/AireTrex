@@ -30,6 +30,7 @@ function initialLineRows(lineItems) {
     description: normalizeSpacedText(line.description || ""),
     mainCategory: line.mainCategory || "",
     productType: line.productType || "",
+    brand: line.brand || "",
     spec1: line.spec1 || "",
     spec2: line.spec2 || "",
     spec3: line.spec3 || "",
@@ -212,6 +213,7 @@ export function QuotationForm() {
         description: row.description || "",
         mainCategory: row.mainCategory || "",
         productType: row.productType || "",
+        brand: row.brand || "",
         spec1: row.spec1 || "",
         spec2: row.spec2 || "",
         spec3: row.spec3 || "",
@@ -389,15 +391,16 @@ export function QuotationForm() {
               <thead>
                 <tr>
                   <th className="items-table__product">Actual Product Name</th>
-                  <th className="items-table__qty">Qty</th>
-                  <th className="items-table__avail-qty">Avail. Qty *</th>
-                  <th className="items-table__desc">Description</th>
+                  <th className="items-table__qty">Required Qty</th>
+                  <th className="items-table__avail-qty">Available Qty *</th>
                   <th className="items-table__cat">Main Category</th>
                   <th className="items-table__type">Product Type</th>
                   <th className="items-table__spec">Spec 1</th>
                   <th className="items-table__spec">Spec 2</th>
                   <th className="items-table__spec">Spec 3</th>
                   <th className="items-table__spec">Spec 4</th>
+                  <th className="items-table__brand">Brand</th>
+                  <th className="items-table__desc">Product Description</th>
                   <th className="items-table__delivery">Delivery</th>
                   <th className="items-table__price">Unit Price *</th>
                   <th className="items-table__gst">GST %</th>
@@ -542,7 +545,16 @@ function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }
           onChange={(product) => onPatch({ product })}
         />
       </td>
-      <td className="items-table__qty">{qtyLabel(line)}</td>
+      <td className="items-table__qty">
+        <input
+          className="input input--compact input--cell input--cell-narrow input--locked"
+          type="text"
+          readOnly
+          tabIndex={-1}
+          value={qtyLabel(line)}
+          aria-label={`Required Qty ${index + 1}`}
+        />
+      </td>
       <td className="items-table__avail-qty">
         <input
           className={`input input--compact input--cell input--cell-narrow ${errors[`availableQuantity_${index}`] ? "input--error" : ""}`}
@@ -552,12 +564,6 @@ function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }
           placeholder="0"
           value={row.availableQuantity}
           onChange={(e) => onPatch({ availableQuantity: e.target.value })}
-        />
-      </td>
-      <td className="items-table__desc">
-        <DescriptionField
-          value={row.description}
-          onChange={(description) => onPatch({ description })}
         />
       </td>
       <td className="items-table__cat">
@@ -618,6 +624,24 @@ function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }
           value={row.spec4 ?? line.spec4 ?? ""}
           onChange={(e) => onPatch({ spec4: e.target.value })}
           aria-label={`Spec 4 row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__brand">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Brand"
+          value={row.brand ?? line.brand ?? ""}
+          onChange={(e) => onPatch({ brand: e.target.value })}
+          aria-label={`Brand row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__desc">
+        <DescriptionField
+          placeholder="Product Description"
+          value={row.description}
+          onChange={(description) => onPatch({ description })}
+          aria-label={`Product Description ${index + 1}`}
         />
       </td>
       <td className="items-table__delivery">
@@ -709,8 +733,8 @@ function GrandTotalPreview({ currency, lineItems, lineRows }) {
 
   return (
     <div className="total-preview">
-      <span>Subtotal: {fmtMoney(subtotal, currency)}</span>
-      <span>GST: {fmtMoney(totalGst, currency)}</span>
+      <strong>Subtotal: {fmtMoney(subtotal, currency)}</strong>
+      <strong>GST: {fmtMoney(totalGst, currency)}</strong>
       <strong>Grand total: {fmtMoney(grandTotal, currency)}</strong>
     </div>
   );

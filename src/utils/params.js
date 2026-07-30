@@ -61,6 +61,7 @@ function buildItemsFromPipes(p) {
     p.get("main_categories") || p.get("main_categorys") || p.get("main_cats")
   );
   const productTypes = splitPipe(p.get("product_types") || p.get("product_type_s"));
+  const brands = splitPipe(p.get("brands") || p.get("brand_s"));
   const vendorRids = splitPipe(p.get("vendor_rids"));
   const vendorIds = splitPipe(p.get("vendor_ids"));
   const count = Math.max(
@@ -75,6 +76,7 @@ function buildItemsFromPipes(p) {
     spec4s.length,
     mainCategories.length,
     productTypes.length,
+    brands.length,
     vendorRids.length,
     vendorIds.length
   );
@@ -93,6 +95,7 @@ function buildItemsFromPipes(p) {
     const spec4 = (spec4s[i] || "").trim();
     const mainCategory = (mainCategories[i] || "").trim();
     const productType = (productTypes[i] || "").trim();
+    const brand = (brands[i] || "").trim();
     const vendorRecordId = (vendorRids[i] || "").trim();
     const vendorId = (vendorIds[i] || "").trim();
     if (!itemId && !product) continue;
@@ -108,6 +111,7 @@ function buildItemsFromPipes(p) {
       spec4,
       mainCategory,
       productType,
+      brand,
       vendorRecordId,
       vendorId,
     });
@@ -137,7 +141,7 @@ export function getRfqParams() {
     product: first?.product || get("product"),
     quantity: first?.quantity || get("qty") || get("quantity"),
     unit: first?.unit || get("unit"),
-    brand: get("brand"),
+    brand: first?.brand || get("brand") || "",
     spec: get("spec"),
     spec1: first?.spec1 || get("spec_1") || get("spec1") || get("spec"),
     spec2: first?.spec2 || get("spec_2") || get("spec2"),
@@ -182,6 +186,7 @@ export function resolveLineItems(params) {
         spec4: params.spec4 || "",
         mainCategory: params.mainCategory || "",
         productType: params.productType || "",
+        brand: params.brand || "",
       },
     ];
   }
@@ -253,6 +258,7 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       spec4: pick(line.spec4, hit.spec4),
       mainCategory: pick(line.mainCategory, hit.mainCategory),
       productType: pick(line.productType, hit.productType),
+      brand: pick(line.brand, hit.brand),
     };
   });
 }
@@ -275,6 +281,7 @@ export function lineItemsNeedCatalogEnrichment(lineItems) {
     }
     if (!String(line.mainCategory || "").trim()) return true;
     if (!String(line.productType || "").trim()) return true;
+    if (!String(line.brand || "").trim()) return true;
     return false;
   });
 }

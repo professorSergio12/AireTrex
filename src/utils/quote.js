@@ -12,10 +12,22 @@ export function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Line totals from unit price (GST @ 18% default). */
-export function calcLineFromUnitPrice({ unitPrice, gstPct = 18, quantity }) {
+/** INR → 18, other currencies → 0. */
+export function defaultGstForCurrency(currency) {
+  return String(currency || "").toUpperCase() === "INR" ? 18 : 0;
+}
+
+/** Parse GST % — 0 is valid (do not fall back to 18). Empty/invalid → fallback. */
+export function parseGstPct(gstPct, fallback = 0) {
+  if (gstPct === null || gstPct === undefined || gstPct === "") return fallback;
+  const n = Number(gstPct);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** Line totals from unit price. GST 0 is allowed and calculated as 0. */
+export function calcLineFromUnitPrice({ unitPrice, gstPct = 0, quantity }) {
   const price = Number(unitPrice) || 0;
-  const gst = Number(gstPct) || 18;
+  const gst = parseGstPct(gstPct, 0);
   const qty = Number(quantity) || 1;
   const subtotal = Math.round(price * qty * 100) / 100;
   const gstAmount = Math.round(((subtotal * gst) / 100) * 100) / 100;

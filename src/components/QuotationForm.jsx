@@ -3,8 +3,10 @@ import { CONFIG } from "../config";
 import { getRfqParams, resolveLineItems, resolveUid, enrichLineItemsWithCatalog, normalizeSpacedText } from "../utils/params";
 import {
   calcLineFromUnitPrice,
+  defaultGstForCurrency,
   fmtMoney,
   generateQuoteNumber,
+  parseGstPct,
   todayIso,
 } from "../utils/quote";
 import { submitQuotation } from "../utils/api";
@@ -14,8 +16,6 @@ import { FileUploadField } from "./FileUploadField";
 import { SuccessScreen } from "./SuccessScreen";
 import { SubmitLoader } from "./SubmitLoader";
 
-const DEFAULT_GST = 18;
-
 function normalizeProductName(value) {
   return String(value ?? "").trim();
 }
@@ -24,7 +24,8 @@ function productsEqual(a, b) {
   return normalizeProductName(a).toLowerCase() === normalizeProductName(b).toLowerCase();
 }
 
-function initialLineRows(lineItems) {
+function initialLineRows(lineItems, currency = "INR") {
+  const gstDefault = String(defaultGstForCurrency(currency));
   return lineItems.map((line) => ({
     product: line.product || "",
     description: normalizeSpacedText(line.description || ""),
@@ -38,7 +39,7 @@ function initialLineRows(lineItems) {
     availableQuantity: "",
     deliveryDate: "",
     unitPrice: "",
-    gst: String(DEFAULT_GST),
+    gst: gstDefault,
     remarks: "",
   }));
 }
@@ -62,12 +63,16 @@ export function QuotationForm() {
     attachments: [],
     datasheets: [],
   });
-  const [lineRows, setLineRows] = useState(() => initialLineRows(resolveLineItems(rfq)));
+  const [lineRows, setLineRows] = useState(() =>
+    initialLineRows(resolveLineItems(rfq), rfq.currency || "INR")
+  );
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState("idle");
   const [errMsg, setErrMsg] = useState("");
   const [submittedVersion, setSubmittedVersion] = useState("");
   const removedItemIdsRef = useRef(new Set());
+  const currencyRef = useRef(form.currency);
+  currencyRef.current = form.currency;
   const [deadlineState, setDeadlineState] = useState({
     loading: Boolean(rfq.rfqNumber && !rfq.dueDate),
     dueDate: rfq.dueDate || "",
@@ -116,7 +121,7 @@ export function QuotationForm() {
         });
         if (!enriched.length) return;
         setLineItems(enriched);
-        setLineRows(initialLineRows(enriched));
+        setLineRows(initialLineRows(enriched, currencyRef.current));
       })
       .catch((err) => {
         console.warn("[RFQ] line-items enrich failed:", err?.message || err);
@@ -222,7 +227,7 @@ export function QuotationForm() {
         deliveryDate: row.deliveryDate || "",
         totalAmount: String(pricing.grandTotal),
         price: String(pricing.unitPrice),
-        gst: String(row.gst || DEFAULT_GST),
+        gst: String(parseGstPct(row.gst, defaultGstForCurrency(form.currency))),
         gstAmount: String(pricing.gstAmount),
         remarks: row.remarks || "",
         uniqueId: `${rfq.rfqNumber}_${line.itemId}_${rfq.vendorId || rfq.vendorRecordId}`,
@@ -369,7 +374,16 @@ export function QuotationForm() {
           </div>
           <div className="grid grid-2">
             <Field label="Currency">
-              <select className="input" value={form.currency} onChange={set("currency")}>
+              <select
+                className="input"
+                value={form.currency}
+                onChange={(e) => {
+                  const currency = e.target.value;
+                  const gstDefault = String(defaultGstForCurrency(currency));
+                  setForm((f) => ({ ...f, currency }));
+                  setLineRows((rows) => rows.map((row) => ({ ...row, gst: gstDefault })));
+                }}
+              >
                 {CONFIG.CURRENCIES.map((c) => (
                   <option key={c} value={c}>
                     {c}

@@ -415,7 +415,7 @@ export function QuotationForm() {
                   <th className="items-table__spec">Spec 4</th>
                   <th className="items-table__brand">Brand</th>
                   <th className="items-table__desc">Product Description</th>
-                  <th className="items-table__delivery">Delivery</th>
+                  <th className="items-table__delivery">Delivery Date</th>
                   <th className="items-table__price">Unit Price *</th>
                   <th className="items-table__gst">GST %</th>
                   <th className="items-table__total">Total</th>

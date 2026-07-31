@@ -47,6 +47,9 @@ function decodeDescriptionPart(part) {
 
 function buildItemsFromPipes(p) {
   const ids = splitPipe(p.get("item_ids"));
+  const itemCodes = splitPipe(
+    p.get("crm_item_ids") || p.get("item_codes") || p.get("item_ids_display")
+  );
   const products = splitPipe(p.get("products"));
   const quantities = splitPipe(p.get("quantities"));
   const units = splitPipe(p.get("units"));
@@ -66,6 +69,7 @@ function buildItemsFromPipes(p) {
   const vendorIds = splitPipe(p.get("vendor_ids"));
   const count = Math.max(
     ids.length,
+    itemCodes.length,
     products.length,
     quantities.length,
     units.length,
@@ -85,6 +89,7 @@ function buildItemsFromPipes(p) {
   const items = [];
   for (let i = 0; i < count; i += 1) {
     const itemId = (ids[i] || "").trim();
+    const itemCode = (itemCodes[i] || "").trim();
     const product = (products[i] || "").trim();
     const quantity = (quantities[i] || "").trim();
     const unit = (units[i] || "").trim();
@@ -98,9 +103,10 @@ function buildItemsFromPipes(p) {
     const brand = (brands[i] || "").trim();
     const vendorRecordId = (vendorRids[i] || "").trim();
     const vendorId = (vendorIds[i] || "").trim();
-    if (!itemId && !product) continue;
+    if (!itemId && !product && !itemCode) continue;
     items.push({
       itemId,
+      itemCode,
       product,
       quantity,
       unit,
@@ -259,6 +265,7 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       mainCategory: pick(line.mainCategory, hit.mainCategory),
       productType: pick(line.productType, hit.productType),
       brand: pick(line.brand, hit.brand),
+      itemCode: pick(line.itemCode, hit.itemCode),
     };
   });
 }
@@ -282,6 +289,7 @@ export function lineItemsNeedCatalogEnrichment(lineItems) {
     if (!String(line.mainCategory || "").trim()) return true;
     if (!String(line.productType || "").trim()) return true;
     if (!String(line.brand || "").trim()) return true;
+    if (!String(line.itemCode || "").trim()) return true;
     return false;
   });
 }

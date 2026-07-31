@@ -29,7 +29,7 @@ function productsEqual(a, b) {
 function initialLineRows(lineItems, currency = "INR") {
   const gstDefault = String(defaultGstForCurrency(currency));
   return lineItems.map((line) => ({
-    product: line.product || "",
+    product: "",
     description: normalizeSpacedText(line.description || ""),
     mainCategory: line.mainCategory || "",
     productType: line.productType || "",
@@ -55,6 +55,10 @@ export function QuotationForm() {
     () => generateQuoteNumber(rfq.rfqNumber),
     [rfq.rfqNumber]
   );
+  const urlHasItemCodes = useMemo(() => {
+    const items = resolveLineItems(rfq);
+    return items.length > 0 && items.every((line) => String(line.itemCode || "").trim());
+  }, [rfq]);
 
   const [form, setForm] = useState({
     quoteNumber: autoQuoteNumber,
@@ -80,6 +84,9 @@ export function QuotationForm() {
     dueDate: rfq.dueDate || "",
     blocked: isDueDatePassed(rfq.dueDate),
   });
+  const [catalogLoading, setCatalogLoading] = useState(
+    Boolean(rfq.rfqNumber && !CONFIG.MOCK_MODE && !urlHasItemCodes)
+  );
 
   const linkValid = Boolean(rfq.rfqNumber && lineItems.length > 0);
   const dueDateLabel = deadlineState.dueDate
@@ -110,6 +117,7 @@ export function QuotationForm() {
     if (rfq.rfqRecordId) params.set("rfq_rid", rfq.rfqRecordId);
 
     let cancelled = false;
+    setCatalogLoading(true);
     fetch(`${CONFIG.LINE_ITEMS_URL}?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -127,6 +135,9 @@ export function QuotationForm() {
       })
       .catch((err) => {
         console.warn("[RFQ] line-items enrich failed:", err?.message || err);
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
       });
 
     return () => {
@@ -203,8 +214,8 @@ export function QuotationForm() {
       });
 
       const originalProduct = normalizeProductName(line.product);
-      const product = normalizeProductName(row.product) || originalProduct;
-      const productEdited = !productsEqual(product, originalProduct);
+      const product = normalizeProductName(row.product);
+      const productEdited = Boolean(product) && !productsEqual(product, originalProduct);
 
       return {
         itemId: line.itemId,
@@ -406,6 +417,7 @@ export function QuotationForm() {
             <table className="items-table items-table--quote">
               <thead>
                 <tr>
+                  <th className="items-table__item-id">Item ID</th>
                   <th className="items-table__product">Actual Product Name</th>
                   <th className="items-table__qty">Required Qty</th>
                   <th className="items-table__avail-qty">Available Qty *</th>
@@ -434,6 +446,7 @@ export function QuotationForm() {
                     row={lineRows[i] || {}}
                     errors={errors}
                     currency={form.currency}
+                    catalogLoading={catalogLoading}
                     canRemove={lineItems.length > 1}
                     onRemove={() => removeLineItem(i)}
                     onPatch={(patch) => patchLineRow(i, patch)}
@@ -540,7 +553,32 @@ function DescriptionField({ value, onChange, placeholder = "Description", classN
   );
 }
 
-function ItemTableRow({ index, line, row, errors, currency, onPatch, canRemove, onRemove }) {
+function isZohoRecordId(value) {
+  return /^\d{10,}$/.test(String(value || "").trim());
+}
+
+function formatItemIdDisplay(line, catalogLoading) {
+  const code = String(line.itemCode || "").trim();
+  if (code) return code;
+  // Never flash Zoho record IDs — wait for Creator Item_Id from enrich.
+  if (catalogLoading || isZohoRecordId(line.itemId)) {
+    return catalogLoading ? "" : "—";
+  }
+  const fallback = String(line.itemId || "").trim();
+  return fallback || "—";
+}
+
+function ItemTableRow({
+  index,
+  line,
+  row,
+  errors,
+  currency,
+  catalogLoading,
+  onPatch,
+  canRemove,
+  onRemove,
+}) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
     gstPct: row.gst,
@@ -554,10 +592,22 @@ function ItemTableRow({ index, line, row, errors, currency, onPatch, canRemove, 
       : "—";
 
   const showTotal = Number(row.unitPrice) > 0;
-  const productValue = row.product ?? line.product ?? "";
+  const productValue = row.product ?? "";
+  const itemIdValue = formatItemIdDisplay(line, catalogLoading);
 
   return (
     <tr>
+      <td className="items-table__item-id">
+        <input
+          className="input input--compact input--cell input--cell-narrow input--locked"
+          type="text"
+          readOnly
+          tabIndex={-1}
+          value={itemIdValue}
+          title={itemIdValue}
+          aria-label={`Item ID ${index + 1}`}
+        />
+      </td>
       <td className="items-table__product">
         <DescriptionField
           className="textarea--product"

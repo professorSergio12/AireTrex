@@ -247,6 +247,17 @@ select.input { appearance: auto; }
   opacity: 1;
 }
 
+.items-table--quote .items-table__item-id {
+  min-width: 120px;
+}
+
+.items-table--quote .items-table__item-id .input--locked {
+  font-weight: 600;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+  background: #e8ebf0;
+}
+
 .items-table--quote .items-table__product {
   min-width: 220px;
   width: 220px;

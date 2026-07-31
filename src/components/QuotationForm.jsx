@@ -7,6 +7,8 @@ import {
   fmtMoney,
   generateQuoteNumber,
   parseGstPct,
+  taxFieldLabelForCurrency,
+  taxLabelForCurrency,
   todayIso,
 } from "../utils/quote";
 import { submitQuotation } from "../utils/api";
@@ -417,7 +419,7 @@ export function QuotationForm() {
                   <th className="items-table__desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
                   <th className="items-table__price">Unit Price *</th>
-                  <th className="items-table__gst">GST %</th>
+                  <th className="items-table__gst">{taxFieldLabelForCurrency(form.currency)}</th>
                   <th className="items-table__total">Total</th>
                   <th className="items-table__remarks">Remarks</th>
                   <th className="items-table__remove" aria-label="Remove">Remove</th>
@@ -431,6 +433,7 @@ export function QuotationForm() {
                     line={line}
                     row={lineRows[i] || {}}
                     errors={errors}
+                    currency={form.currency}
                     canRemove={lineItems.length > 1}
                     onRemove={() => removeLineItem(i)}
                     onPatch={(patch) => patchLineRow(i, patch)}
@@ -439,7 +442,12 @@ export function QuotationForm() {
               </tbody>
             </table>
           </div>
-          <GrandTotalPreview currency={form.currency} lineItems={lineItems} lineRows={lineRows} />
+          <GrandTotalPreview
+            currency={form.currency}
+            lineItems={lineItems}
+            lineRows={lineRows}
+            taxLabel={taxLabelForCurrency(form.currency)}
+          />
         </section>
 
         <section className="card">
@@ -532,12 +540,13 @@ function DescriptionField({ value, onChange, placeholder = "Description", classN
   );
 }
 
-function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }) {
+function ItemTableRow({ index, line, row, errors, currency, onPatch, canRemove, onRemove }) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
     gstPct: row.gst,
     quantity: line.quantity,
   });
+  const taxPlaceholder = String(defaultGstForCurrency(currency));
 
   const fmtShort = (n) =>
     n > 0
@@ -683,8 +692,9 @@ function ItemTableRow({ index, line, row, errors, onPatch, canRemove, onRemove }
           type="number"
           min="0"
           step="0.01"
-          placeholder="18"
+          placeholder={taxPlaceholder}
           value={row.gst}
+          aria-label={`${taxFieldLabelForCurrency(currency)} ${index + 1}`}
           onChange={(e) => onPatch({ gst: e.target.value })}
         />
       </td>
@@ -727,7 +737,7 @@ function qtyLabel(line) {
   return String(line.quantity);
 }
 
-function GrandTotalPreview({ currency, lineItems, lineRows }) {
+function GrandTotalPreview({ currency, lineItems, lineRows, taxLabel = "GST" }) {
   let subtotal = 0;
   let totalGst = 0;
 
@@ -748,7 +758,7 @@ function GrandTotalPreview({ currency, lineItems, lineRows }) {
   return (
     <div className="total-preview">
       <strong>Subtotal: {fmtMoney(subtotal, currency)}</strong>
-      <strong>GST: {fmtMoney(totalGst, currency)}</strong>
+      <strong>{taxLabel}: {fmtMoney(totalGst, currency)}</strong>
       <strong>Grand total: {fmtMoney(grandTotal, currency)}</strong>
     </div>
   );

@@ -12,19 +12,42 @@ export function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** INR → 18, other currencies → 0. */
-export function defaultGstForCurrency(currency) {
-  return String(currency || "").toUpperCase() === "INR" ? 18 : 0;
+const TAX_BY_CURRENCY = {
+  INR: { defaultPct: 18, label: "GST" },
+  USD: { defaultPct: 0, label: "Sales Tax" },
+  EUR: { defaultPct: 20, label: "VAT" },
+  GBP: { defaultPct: 20, label: "VAT" },
+  AED: { defaultPct: 5, label: "VAT" },
+};
+
+function taxConfigForCurrency(currency) {
+  const key = String(currency || "").toUpperCase();
+  return TAX_BY_CURRENCY[key] || { defaultPct: 0, label: "Tax" };
 }
 
-/** Parse GST % — 0 is valid (do not fall back to 18). Empty/invalid → fallback. */
+/** Default tax % by currency (INR 18, USD 0, EUR/GBP 20, AED 5). */
+export function defaultGstForCurrency(currency) {
+  return taxConfigForCurrency(currency).defaultPct;
+}
+
+/** UI label: GST / Sales Tax / VAT (without %). */
+export function taxLabelForCurrency(currency) {
+  return taxConfigForCurrency(currency).label;
+}
+
+/** Column / summary label with % suffix. */
+export function taxFieldLabelForCurrency(currency) {
+  return `${taxLabelForCurrency(currency)} %`;
+}
+
+/** Parse tax % — 0 is valid. Empty/invalid → fallback. */
 export function parseGstPct(gstPct, fallback = 0) {
   if (gstPct === null || gstPct === undefined || gstPct === "") return fallback;
   const n = Number(gstPct);
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** Line totals from unit price. GST 0 is allowed and calculated as 0. */
+/** Line totals from unit price. Tax 0 is allowed and calculated as 0. */
 export function calcLineFromUnitPrice({ unitPrice, gstPct = 0, quantity }) {
   const price = Number(unitPrice) || 0;
   const gst = parseGstPct(gstPct, 0);

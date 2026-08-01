@@ -34,6 +34,7 @@ function initialLineRows(lineItems, currency = "INR") {
     mainCategory: line.mainCategory || "",
     productType: line.productType || "",
     brand: line.brand || "",
+    partNumber: line.partNumber || "",
     spec1: line.spec1 || "",
     spec2: line.spec2 || "",
     spec3: line.spec3 || "",
@@ -232,6 +233,7 @@ export function QuotationForm() {
         mainCategory: row.mainCategory || "",
         productType: row.productType || "",
         brand: row.brand || "",
+        partNumber: row.partNumber || "",
         spec1: row.spec1 || "",
         spec2: row.spec2 || "",
         spec3: row.spec3 || "",
@@ -428,6 +430,7 @@ export function QuotationForm() {
                   <th className="items-table__spec">Spec 3</th>
                   <th className="items-table__spec">Spec 4</th>
                   <th className="items-table__brand">Brand</th>
+                  <th className="items-table__part-number">Part Number</th>
                   <th className="items-table__desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
                   <th className="items-table__price">Unit Price *</th>
@@ -707,6 +710,16 @@ function ItemTableRow({
           value={row.brand ?? line.brand ?? ""}
           onChange={(e) => onPatch({ brand: e.target.value })}
           aria-label={`Brand row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__part-number">
+        <input
+          className="input input--compact input--cell input--locked"
+          type="text"
+          readOnly
+          tabIndex={-1}
+          value={row.partNumber ?? line.partNumber ?? ""}
+          aria-label={`Part Number row ${index + 1}`}
         />
       </td>
       <td className="items-table__desc">

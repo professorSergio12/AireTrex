@@ -65,6 +65,9 @@ function buildItemsFromPipes(p) {
   );
   const productTypes = splitPipe(p.get("product_types") || p.get("product_type_s"));
   const brands = splitPipe(p.get("brands") || p.get("brand_s"));
+  const partNumbers = splitPipe(
+    p.get("part_numbers") || p.get("part_number_s") || p.get("partNumbers")
+  );
   const vendorRids = splitPipe(p.get("vendor_rids"));
   const vendorIds = splitPipe(p.get("vendor_ids"));
   const count = Math.max(
@@ -81,6 +84,7 @@ function buildItemsFromPipes(p) {
     mainCategories.length,
     productTypes.length,
     brands.length,
+    partNumbers.length,
     vendorRids.length,
     vendorIds.length
   );
@@ -101,6 +105,7 @@ function buildItemsFromPipes(p) {
     const mainCategory = (mainCategories[i] || "").trim();
     const productType = (productTypes[i] || "").trim();
     const brand = (brands[i] || "").trim();
+    const partNumber = (partNumbers[i] || "").trim();
     const vendorRecordId = (vendorRids[i] || "").trim();
     const vendorId = (vendorIds[i] || "").trim();
     if (!itemId && !product && !itemCode) continue;
@@ -118,6 +123,7 @@ function buildItemsFromPipes(p) {
       mainCategory,
       productType,
       brand,
+      partNumber,
       vendorRecordId,
       vendorId,
     });
@@ -148,6 +154,8 @@ export function getRfqParams() {
     quantity: first?.quantity || get("qty") || get("quantity"),
     unit: first?.unit || get("unit"),
     brand: first?.brand || get("brand") || "",
+    partNumber:
+      first?.partNumber || get("part_number") || get("partNumber") || "",
     spec: get("spec"),
     spec1: first?.spec1 || get("spec_1") || get("spec1") || get("spec"),
     spec2: first?.spec2 || get("spec_2") || get("spec2"),
@@ -193,6 +201,7 @@ export function resolveLineItems(params) {
         mainCategory: params.mainCategory || "",
         productType: params.productType || "",
         brand: params.brand || "",
+        partNumber: params.partNumber || "",
       },
     ];
   }
@@ -265,6 +274,7 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       mainCategory: pick(line.mainCategory, hit.mainCategory),
       productType: pick(line.productType, hit.productType),
       brand: pick(line.brand, hit.brand),
+      partNumber: pick(line.partNumber, hit.partNumber),
       itemCode: pick(line.itemCode, hit.itemCode),
     };
   });
@@ -289,6 +299,7 @@ export function lineItemsNeedCatalogEnrichment(lineItems) {
     if (!String(line.mainCategory || "").trim()) return true;
     if (!String(line.productType || "").trim()) return true;
     if (!String(line.brand || "").trim()) return true;
+    if (!String(line.partNumber || "").trim()) return true;
     if (!String(line.itemCode || "").trim()) return true;
     return false;
   });

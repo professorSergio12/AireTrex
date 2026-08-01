@@ -299,7 +299,8 @@ select.input { appearance: auto; }
 
 .items-table--quote .items-table__cat,
 .items-table--quote .items-table__type,
-.items-table--quote .items-table__brand {
+.items-table--quote .items-table__brand,
+.items-table--quote .items-table__part-number {
   min-width: 120px;
 }
 

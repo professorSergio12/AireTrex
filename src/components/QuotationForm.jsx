@@ -527,10 +527,19 @@ export function QuotationForm() {
   );
 }
 
-function DescriptionField({ value, onChange, placeholder = "Description", className = "", error = false, "aria-label": ariaLabel }) {
+function DescriptionField({
+  value,
+  onChange,
+  placeholder = "Description",
+  className = "",
+  error = false,
+  scrollable = false,
+  "aria-label": ariaLabel,
+}) {
   const ref = useRef(null);
 
   const resize = () => {
+    if (scrollable) return;
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
@@ -539,12 +548,12 @@ function DescriptionField({ value, onChange, placeholder = "Description", classN
 
   useEffect(() => {
     resize();
-  }, [value]);
+  }, [value, scrollable]);
 
   return (
     <textarea
       ref={ref}
-      className={`input input--compact input--cell textarea textarea--description ${error ? "input--error" : ""} ${className}`.trim()}
+      className={`input input--compact input--cell textarea textarea--description ${scrollable ? "textarea--scrollable" : ""} ${error ? "input--error" : ""} ${className}`.trim()}
       placeholder={placeholder}
       value={value}
       rows={1}
@@ -726,6 +735,7 @@ function ItemTableRow({
         <DescriptionField
           placeholder="Product Description"
           value={row.description}
+          scrollable
           onChange={(description) => onPatch({ description })}
           aria-label={`Product Description ${index + 1}`}
         />

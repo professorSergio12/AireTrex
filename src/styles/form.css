@@ -293,8 +293,9 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__desc {
-  min-width: 180px;
-  width: 180px;
+  min-width: 200px;
+  width: 220px;
+  position: relative;
 }
 
 .items-table--quote .items-table__cat,
@@ -372,6 +373,52 @@ select.input { appearance: auto; }
   white-space: pre-wrap;
   word-break: break-word;
   field-sizing: content;
+}
+
+.textarea--description.textarea--scrollable {
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  resize: none;
+  field-sizing: fixed;
+  text-align: left;
+  line-height: 1.35;
+  white-space: nowrap;
+  word-break: normal;
+  scrollbar-width: thin;
+}
+
+.textarea--description.textarea--scrollable:focus {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 6;
+  width: auto;
+  max-width: none;
+  height: 132px;
+  min-height: 132px;
+  max-height: 132px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-overflow: clip;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  border-color: var(--brand);
+  scrollbar-color: #c5ccd6 transparent;
+}
+
+.textarea--description.textarea--scrollable:focus::-webkit-scrollbar {
+  width: 6px;
+}
+
+.textarea--description.textarea--scrollable:focus::-webkit-scrollbar-thumb {
+  background: #c5ccd6;
+  border-radius: 6px;
 }
 
 .items-table__calc {

@@ -35,6 +35,8 @@ function initialLineRows(lineItems, currency = "INR") {
     productType: line.productType || "",
     brand: line.brand || "",
     partNumber: line.partNumber || "",
+    itemPartNumber: "",
+    vendorProductDescription: "",
     spec1: line.spec1 || "",
     spec2: line.spec2 || "",
     spec3: line.spec3 || "",
@@ -221,6 +223,12 @@ export function QuotationForm() {
       return {
         itemId: line.itemId,
         itemMasterId: line.itemId,
+        itemCode: (() => {
+          const code = String(line.itemCode || "").trim();
+          if (code) return code;
+          const fallback = String(line.itemId || "").trim();
+          return /^\d{10,}$/.test(fallback) ? "" : fallback;
+        })(),
         product,
         originalProduct,
         productEdited,
@@ -234,6 +242,8 @@ export function QuotationForm() {
         productType: row.productType || "",
         brand: row.brand || "",
         partNumber: row.partNumber || "",
+        itemPartNumber: row.itemPartNumber || "",
+        vendorProductDescription: row.vendorProductDescription || "",
         spec1: row.spec1 || "",
         spec2: row.spec2 || "",
         spec3: row.spec3 || "",
@@ -432,6 +442,8 @@ export function QuotationForm() {
                   <th className="items-table__brand">Brand</th>
                   <th className="items-table__part-number">Part Number</th>
                   <th className="items-table__desc">Product Description</th>
+                  <th className="items-table__item-part-number">Item Part Number</th>
+                  <th className="items-table__vendor-desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
                   <th className="items-table__price">Unit Price *</th>
                   <th className="items-table__gst">{taxFieldLabelForCurrency(form.currency)}</th>
@@ -534,12 +546,13 @@ function DescriptionField({
   className = "",
   error = false,
   scrollable = false,
+  readOnly = false,
   "aria-label": ariaLabel,
 }) {
   const ref = useRef(null);
 
   const resize = () => {
-    if (scrollable) return;
+    if (scrollable || readOnly) return;
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
@@ -548,19 +561,39 @@ function DescriptionField({
 
   useEffect(() => {
     resize();
-  }, [value, scrollable]);
+  }, [value, scrollable, readOnly]);
 
   return (
     <textarea
       ref={ref}
-      className={`input input--compact input--cell textarea textarea--description ${scrollable ? "textarea--scrollable" : ""} ${error ? "input--error" : ""} ${className}`.trim()}
+      className={`input input--compact input--cell textarea textarea--description ${scrollable ? "textarea--scrollable" : ""} ${readOnly ? "input--locked" : ""} ${error ? "input--error" : ""} ${className}`.trim()}
       placeholder={placeholder}
       value={value}
       rows={1}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
       title={value || undefined}
       aria-label={ariaLabel}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        if (readOnly) return;
+        onChange(e.target.value);
+      }}
       onInput={resize}
+    />
+  );
+}
+
+function LockedTextInput({ value, placeholder, ariaLabel }) {
+  return (
+    <input
+      className="input input--compact input--cell input--locked"
+      type="text"
+      readOnly
+      tabIndex={-1}
+      placeholder={placeholder}
+      value={value || ""}
+      title={value || undefined}
+      aria-label={ariaLabel}
     />
   );
 }
@@ -652,92 +685,88 @@ function ItemTableRow({
         />
       </td>
       <td className="items-table__cat">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Main Category"
           value={row.mainCategory ?? line.mainCategory ?? ""}
-          onChange={(e) => onPatch({ mainCategory: e.target.value })}
-          aria-label={`Main Category row ${index + 1}`}
+          ariaLabel={`Main Category row ${index + 1}`}
         />
       </td>
       <td className="items-table__type">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Product Type"
           value={row.productType ?? line.productType ?? ""}
-          onChange={(e) => onPatch({ productType: e.target.value })}
-          aria-label={`Product Type row ${index + 1}`}
+          ariaLabel={`Product Type row ${index + 1}`}
         />
       </td>
       <td className="items-table__spec">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Spec 1"
           value={row.spec1 ?? line.spec1 ?? ""}
-          onChange={(e) => onPatch({ spec1: e.target.value })}
-          aria-label={`Spec 1 row ${index + 1}`}
+          ariaLabel={`Spec 1 row ${index + 1}`}
         />
       </td>
       <td className="items-table__spec">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Spec 2"
           value={row.spec2 ?? line.spec2 ?? ""}
-          onChange={(e) => onPatch({ spec2: e.target.value })}
-          aria-label={`Spec 2 row ${index + 1}`}
+          ariaLabel={`Spec 2 row ${index + 1}`}
         />
       </td>
       <td className="items-table__spec">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Spec 3"
           value={row.spec3 ?? line.spec3 ?? ""}
-          onChange={(e) => onPatch({ spec3: e.target.value })}
-          aria-label={`Spec 3 row ${index + 1}`}
+          ariaLabel={`Spec 3 row ${index + 1}`}
         />
       </td>
       <td className="items-table__spec">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Spec 4"
           value={row.spec4 ?? line.spec4 ?? ""}
-          onChange={(e) => onPatch({ spec4: e.target.value })}
-          aria-label={`Spec 4 row ${index + 1}`}
+          ariaLabel={`Spec 4 row ${index + 1}`}
         />
       </td>
       <td className="items-table__brand">
-        <input
-          className="input input--compact input--cell"
-          type="text"
+        <LockedTextInput
           placeholder="Brand"
           value={row.brand ?? line.brand ?? ""}
-          onChange={(e) => onPatch({ brand: e.target.value })}
-          aria-label={`Brand row ${index + 1}`}
+          ariaLabel={`Brand row ${index + 1}`}
         />
       </td>
       <td className="items-table__part-number">
-        <input
-          className="input input--compact input--cell input--locked"
-          type="text"
-          readOnly
-          tabIndex={-1}
+        <LockedTextInput
+          placeholder="Part Number"
           value={row.partNumber ?? line.partNumber ?? ""}
-          aria-label={`Part Number row ${index + 1}`}
+          ariaLabel={`Part Number row ${index + 1}`}
         />
       </td>
       <td className="items-table__desc">
         <DescriptionField
           placeholder="Product Description"
-          value={row.description}
+          value={row.description ?? line.description ?? ""}
           scrollable
-          onChange={(description) => onPatch({ description })}
+          readOnly
+          onChange={() => {}}
           aria-label={`Product Description ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__item-part-number">
+        <input
+          className="input input--compact input--cell"
+          type="text"
+          placeholder="Enter Part Number"
+          value={row.itemPartNumber ?? ""}
+          onChange={(e) => onPatch({ itemPartNumber: e.target.value })}
+          aria-label={`Item Part Number row ${index + 1}`}
+        />
+      </td>
+      <td className="items-table__vendor-desc">
+        <DescriptionField
+          placeholder="Enter Product Description"
+          value={row.vendorProductDescription ?? ""}
+          scrollable
+          onChange={(vendorProductDescription) => onPatch({ vendorProductDescription })}
+          aria-label={`Product Description (vendor) ${index + 1}`}
         />
       </td>
       <td className="items-table__delivery">
@@ -782,11 +811,12 @@ function ItemTableRow({
         />
       </td>
       <td className="items-table__remarks">
-        <input
-          className="input input--compact input--cell"
+        <DescriptionField
           placeholder="Notes"
-          value={row.remarks}
-          onChange={(e) => onPatch({ remarks: e.target.value })}
+          value={row.remarks ?? ""}
+          scrollable
+          onChange={(remarks) => onPatch({ remarks })}
+          aria-label={`Remarks ${index + 1}`}
         />
       </td>
       <td className="items-table__remove">

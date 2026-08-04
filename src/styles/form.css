@@ -298,11 +298,24 @@ select.input { appearance: auto; }
   position: relative;
 }
 
+.items-table--quote .items-table__desc .textarea--scrollable,
+.items-table--quote .items-table__vendor-desc .textarea--scrollable,
+.items-table--quote .items-table__remarks .textarea--scrollable {
+  text-align: center;
+}
+
 .items-table--quote .items-table__cat,
 .items-table--quote .items-table__type,
 .items-table--quote .items-table__brand,
-.items-table--quote .items-table__part-number {
+.items-table--quote .items-table__part-number,
+.items-table--quote .items-table__item-part-number {
   min-width: 120px;
+}
+
+.items-table--quote .items-table__vendor-desc {
+  min-width: 200px;
+  width: 220px;
+  position: relative;
 }
 
 .items-table--quote .items-table__spec {
@@ -333,7 +346,9 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__remarks {
-  min-width: 110px;
+  min-width: 160px;
+  width: 180px;
+  position: relative;
 }
 
 .items-table--quote .items-table__remove {
@@ -410,6 +425,20 @@ select.input { appearance: auto; }
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
   border-color: var(--brand);
   scrollbar-color: #c5ccd6 transparent;
+}
+
+/* RFQ Product Description (read-only): locked look, still expand to read */
+.textarea--description.textarea--scrollable.input--locked {
+  cursor: default;
+  background: #e8ebf0;
+  -webkit-text-fill-color: var(--ink);
+}
+
+.textarea--description.textarea--scrollable.input--locked:focus {
+  background: #e8ebf0;
+  border-color: #c5ccd6;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  cursor: default;
 }
 
 .textarea--description.textarea--scrollable:focus::-webkit-scrollbar {

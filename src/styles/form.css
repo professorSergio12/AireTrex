@@ -305,11 +305,40 @@ select.input { appearance: auto; }
 }
 
 .items-table--quote .items-table__cat,
-.items-table--quote .items-table__type,
 .items-table--quote .items-table__brand,
 .items-table--quote .items-table__part-number,
 .items-table--quote .items-table__item-part-number {
   min-width: 120px;
+}
+
+.items-table--quote .items-table__type {
+  min-width: 160px;
+  width: 180px;
+  position: relative;
+}
+
+.items-table--quote .input--locked-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.items-table--quote .input--locked-expand {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 6;
+  width: max(100%, min(360px, 55vw));
+  min-width: 220px;
+  height: 34px;
+  max-height: 34px;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  background: #e8ebf0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  border-color: #c5ccd6;
 }
 
 .items-table--quote .items-table__vendor-desc {

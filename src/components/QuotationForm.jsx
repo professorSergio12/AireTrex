@@ -571,7 +571,8 @@ function DescriptionField({
       value={value}
       rows={1}
       readOnly={readOnly}
-      tabIndex={readOnly ? -1 : undefined}
+      // Keep focusable when scrollable+readOnly so user can expand to read long text.
+      tabIndex={readOnly && !scrollable ? -1 : undefined}
       title={value || undefined}
       aria-label={ariaLabel}
       onChange={(e) => {
@@ -583,17 +584,67 @@ function DescriptionField({
   );
 }
 
-function LockedTextInput({ value, placeholder, ariaLabel }) {
+function LockedTextInput({ value, placeholder, ariaLabel, expandable = false }) {
+  const inputRef = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const text = value || "";
+
+  useEffect(() => {
+    if (!expandable) return undefined;
+    const el = inputRef.current;
+    if (!el) return undefined;
+
+    const measure = () => {
+      // Collapse briefly so scrollWidth reflects truncated single-line width.
+      const wasExpanded = el.classList.contains("input--locked-expand");
+      if (wasExpanded) el.classList.remove("input--locked-expand");
+      setOverflows(el.scrollWidth > el.clientWidth + 1);
+      if (wasExpanded) el.classList.add("input--locked-expand");
+    };
+
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [text, expandable]);
+
+  if (!expandable) {
+    return (
+      <input
+        className="input input--compact input--cell input--locked"
+        type="text"
+        readOnly
+        tabIndex={-1}
+        placeholder={placeholder}
+        value={text}
+        title={text || undefined}
+        aria-label={ariaLabel}
+      />
+    );
+  }
+
   return (
     <input
-      className="input input--compact input--cell input--locked"
+      ref={inputRef}
+      className={`input input--compact input--cell input--locked input--locked-ellipsis ${expanded && overflows ? "input--locked-expand" : ""}`.trim()}
       type="text"
       readOnly
-      tabIndex={-1}
       placeholder={placeholder}
-      value={value || ""}
-      title={value || undefined}
+      value={text}
+      title={text || undefined}
       aria-label={ariaLabel}
+      onFocus={() => {
+        if (overflows) setExpanded(true);
+      }}
+      onBlur={() => setExpanded(false)}
+      onClick={() => {
+        if (overflows) setExpanded(true);
+      }}
     />
   );
 }
@@ -693,6 +744,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__type">
         <LockedTextInput
+          expandable
           placeholder="Product Type"
           value={row.productType ?? line.productType ?? ""}
           ariaLabel={`Product Type row ${index + 1}`}

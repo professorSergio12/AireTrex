@@ -442,6 +442,7 @@ export function QuotationForm() {
                   <th className="items-table__brand">Brand</th>
                   <th className="items-table__part-number">Part Number</th>
                   <th className="items-table__desc">Product Description</th>
+                  <th className="items-table__attachment">Attachment</th>
                   <th className="items-table__item-part-number">Item Part Number</th>
                   <th className="items-table__vendor-desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
@@ -752,6 +753,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__spec">
         <LockedTextInput
+          expandable
           placeholder="Spec 1"
           value={row.spec1 ?? line.spec1 ?? ""}
           ariaLabel={`Spec 1 row ${index + 1}`}
@@ -759,6 +761,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__spec">
         <LockedTextInput
+          expandable
           placeholder="Spec 2"
           value={row.spec2 ?? line.spec2 ?? ""}
           ariaLabel={`Spec 2 row ${index + 1}`}
@@ -766,6 +769,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__spec">
         <LockedTextInput
+          expandable
           placeholder="Spec 3"
           value={row.spec3 ?? line.spec3 ?? ""}
           ariaLabel={`Spec 3 row ${index + 1}`}
@@ -773,6 +777,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__spec">
         <LockedTextInput
+          expandable
           placeholder="Spec 4"
           value={row.spec4 ?? line.spec4 ?? ""}
           ariaLabel={`Spec 4 row ${index + 1}`}
@@ -787,6 +792,7 @@ function ItemTableRow({
       </td>
       <td className="items-table__part-number">
         <LockedTextInput
+          expandable
           placeholder="Part Number"
           value={row.partNumber ?? line.partNumber ?? ""}
           ariaLabel={`Part Number row ${index + 1}`}
@@ -801,6 +807,23 @@ function ItemTableRow({
           onChange={() => {}}
           aria-label={`Product Description ${index + 1}`}
         />
+      </td>
+      <td className="items-table__attachment">
+        {String(line.attachmentRef || "").trim() ? (
+          <a
+            className="input input--compact input--cell input--locked attachment-link"
+            href={String(line.attachmentRef).trim()}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={String(line.attachmentRef).trim()}
+          >
+            View File
+          </a>
+        ) : (
+          <span className="input input--compact input--cell input--locked attachment-link attachment-link--empty">
+            —
+          </span>
+        )}
       </td>
       <td className="items-table__item-part-number">
         <input

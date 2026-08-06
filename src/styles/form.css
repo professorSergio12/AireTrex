@@ -306,9 +306,45 @@ select.input { appearance: auto; }
 
 .items-table--quote .items-table__cat,
 .items-table--quote .items-table__brand,
-.items-table--quote .items-table__part-number,
 .items-table--quote .items-table__item-part-number {
   min-width: 120px;
+}
+
+.items-table--quote .items-table__part-number {
+  min-width: 120px;
+  position: relative;
+}
+
+.items-table--quote .items-table__attachment {
+  min-width: 120px;
+  vertical-align: middle;
+}
+
+.items-table--quote a.attachment-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: #2f6fed !important;
+  -webkit-text-fill-color: #2f6fed !important;
+  font-weight: 700;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.items-table--quote a.attachment-link:hover {
+  color: #1d4ed8 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
+  text-decoration: underline;
+  border-color: #c5ccd6;
+}
+
+.items-table--quote .attachment-link--empty {
+  display: block;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: default;
 }
 
 .items-table--quote .items-table__type {
@@ -349,6 +385,7 @@ select.input { appearance: auto; }
 
 .items-table--quote .items-table__spec {
   min-width: 100px;
+  position: relative;
 }
 
 .items-table--quote .items-table__delivery {

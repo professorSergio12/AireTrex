@@ -68,6 +68,9 @@ function buildItemsFromPipes(p) {
   const partNumbers = splitPipe(
     p.get("part_numbers") || p.get("part_number_s") || p.get("partNumbers")
   );
+  const attachmentRefs = splitPipe(
+    p.get("attachment_refs") || p.get("attachmentRefs") || p.get("workdrive_links")
+  );
   const vendorRids = splitPipe(p.get("vendor_rids"));
   const vendorIds = splitPipe(p.get("vendor_ids"));
   const count = Math.max(
@@ -85,6 +88,7 @@ function buildItemsFromPipes(p) {
     productTypes.length,
     brands.length,
     partNumbers.length,
+    attachmentRefs.length,
     vendorRids.length,
     vendorIds.length
   );
@@ -106,6 +110,7 @@ function buildItemsFromPipes(p) {
     const productType = (productTypes[i] || "").trim();
     const brand = (brands[i] || "").trim();
     const partNumber = (partNumbers[i] || "").trim();
+    const attachmentRef = (attachmentRefs[i] || "").trim();
     const vendorRecordId = (vendorRids[i] || "").trim();
     const vendorId = (vendorIds[i] || "").trim();
     if (!itemId && !product && !itemCode) continue;
@@ -124,6 +129,7 @@ function buildItemsFromPipes(p) {
       productType,
       brand,
       partNumber,
+      attachmentRef,
       vendorRecordId,
       vendorId,
     });
@@ -156,6 +162,12 @@ export function getRfqParams() {
     brand: first?.brand || get("brand") || "",
     partNumber:
       first?.partNumber || get("part_number") || get("partNumber") || "",
+    attachmentRef:
+      first?.attachmentRef ||
+      get("attachment_ref") ||
+      get("attachmentRef") ||
+      get("workdrive_link") ||
+      "",
     spec: get("spec"),
     spec1: first?.spec1 || get("spec_1") || get("spec1") || get("spec"),
     spec2: first?.spec2 || get("spec_2") || get("spec2"),
@@ -202,6 +214,7 @@ export function resolveLineItems(params) {
         productType: params.productType || "",
         brand: params.brand || "",
         partNumber: params.partNumber || "",
+        attachmentRef: params.attachmentRef || "",
       },
     ];
   }
@@ -275,6 +288,7 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       productType: pick(line.productType, hit.productType),
       brand: pick(line.brand, hit.brand),
       partNumber: pick(line.partNumber, hit.partNumber),
+      attachmentRef: pick(line.attachmentRef, hit.attachmentRef),
       itemCode: pick(line.itemCode, hit.itemCode),
     };
   });

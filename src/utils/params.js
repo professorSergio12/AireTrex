@@ -280,10 +280,12 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
       unit: line.unit || hit.unit || "",
       // Prefer Creator description when present (URL encoding often mangles it).
       description: hitDesc || normalizeSpacedText(rawLineDesc) || "",
-      spec1: pick(line.spec1, hit.spec1),
-      spec2: pick(line.spec2, hit.spec2),
-      spec3: pick(line.spec3, hit.spec3),
-      spec4: pick(line.spec4, hit.spec4),
+      // Specs must reflect what the RFQ email/link actually sent, not whatever the
+      // catalog record currently holds — never introduce a spec that wasn't already there.
+      spec1: line.spec1 || "",
+      spec2: line.spec2 || "",
+      spec3: line.spec3 || "",
+      spec4: line.spec4 || "",
       mainCategory: pick(line.mainCategory, hit.mainCategory),
       productType: pick(line.productType, hit.productType),
       brand: pick(line.brand, hit.brand),

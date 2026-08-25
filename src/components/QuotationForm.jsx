@@ -15,6 +15,8 @@ import { submitQuotation } from "../utils/api";
 import { formatDueDateDisplay, isDueDatePassed } from "../utils/deadline";
 import { Field, ReadOnlyField } from "./Field";
 import { FileUploadField } from "./FileUploadField";
+import { DescriptionPopup } from "./DescriptionPopup";
+import { SpecsPopup } from "./SpecsPopup";
 import { SuccessScreen } from "./SuccessScreen";
 import { SubmitLoader } from "./SubmitLoader";
 
@@ -54,6 +56,15 @@ export function QuotationForm() {
   const [lineItems, setLineItems] = useState(() => resolveLineItems(rfq));
   const uniqueId = useMemo(() => resolveUid(rfq), [rfq]);
   const multiItem = lineItems.length > 1;
+  // Specs move into a single "View Specs" popup per item (instead of one column per
+  // spec) so a row missing Spec 2 but having Spec 3 doesn't leave ragged empty cells.
+  const hasAnySpecs = useMemo(
+    () =>
+      lineItems.some((line) =>
+        ["spec1", "spec2", "spec3", "spec4"].some((key) => String(line[key] || "").trim())
+      ),
+    [lineItems]
+  );
   const autoQuoteNumber = useMemo(
     () => generateQuoteNumber(rfq.rfqNumber),
     [rfq.rfqNumber]
@@ -430,19 +441,18 @@ export function QuotationForm() {
               <thead>
                 <tr>
                   <th className="items-table__item-id">Item ID</th>
-                  <th className="items-table__product">Actual Product Name</th>
                   <th className="items-table__qty">Required Qty</th>
-                  <th className="items-table__avail-qty">Available Qty *</th>
                   <th className="items-table__cat">Main Category</th>
                   <th className="items-table__type">Product Type</th>
-                  <th className="items-table__spec">Spec 1</th>
-                  <th className="items-table__spec">Spec 2</th>
-                  <th className="items-table__spec">Spec 3</th>
-                  <th className="items-table__spec">Spec 4</th>
+                  {hasAnySpecs && <th className="items-table__spec">Specifications</th>}
                   <th className="items-table__brand">Brand</th>
                   <th className="items-table__part-number">Part Number</th>
                   <th className="items-table__desc">Product Description</th>
                   <th className="items-table__attachment">Attachment</th>
+                  <th className="items-table__product">Actual Product Name</th>
+                  <th className="items-table__avail-qty">
+                    Available Qty <span className="req-asterisk">*</span>
+                  </th>
                   <th className="items-table__item-part-number">Item Part Number</th>
                   <th className="items-table__vendor-desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
@@ -464,6 +474,7 @@ export function QuotationForm() {
                     currency={form.currency}
                     catalogLoading={catalogLoading}
                     canRemove={lineItems.length > 1}
+                    hasAnySpecs={hasAnySpecs}
                     onRemove={() => removeLineItem(i)}
                     onPatch={(patch) => patchLineRow(i, patch)}
                   />
@@ -585,11 +596,13 @@ function DescriptionField({
   );
 }
 
-function LockedTextInput({ value, placeholder, ariaLabel, expandable = false }) {
+function LockedTextInput({ value, ariaLabel, expandable = false }) {
   const inputRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
-  const text = value || "";
+  // Read-only cell: show an em dash for "no data", never the field-name placeholder —
+  // otherwise a row missing this spec looks like it has one once the column is shown.
+  const text = value || "—";
 
   useEffect(() => {
     if (!expandable) return undefined;
@@ -621,9 +634,8 @@ function LockedTextInput({ value, placeholder, ariaLabel, expandable = false }) 
         type="text"
         readOnly
         tabIndex={-1}
-        placeholder={placeholder}
         value={text}
-        title={text || undefined}
+        title={text}
         aria-label={ariaLabel}
       />
     );
@@ -635,9 +647,8 @@ function LockedTextInput({ value, placeholder, ariaLabel, expandable = false }) 
       className={`input input--compact input--cell input--locked input--locked-ellipsis ${expanded && overflows ? "input--locked-expand" : ""}`.trim()}
       type="text"
       readOnly
-      placeholder={placeholder}
       value={text}
-      title={text || undefined}
+      title={text}
       aria-label={ariaLabel}
       onFocus={() => {
         if (overflows) setExpanded(true);
@@ -647,6 +658,94 @@ function LockedTextInput({ value, placeholder, ariaLabel, expandable = false }) 
         if (overflows) setExpanded(true);
       }}
     />
+  );
+}
+
+function ItemSpecsCell({ specs, index }) {
+  const [open, setOpen] = useState(false);
+  const filled = specs.filter((spec) => String(spec.value || "").trim());
+
+  if (!filled.length) {
+    return (
+      <span className="input input--compact input--cell input--locked specs-trigger--empty">—</span>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="input input--compact input--cell input--locked specs-trigger"
+        onClick={() => setOpen(true)}
+        aria-label={`View specifications row ${index + 1}`}
+      >
+        View Specs
+      </button>
+      {open && <SpecsPopup specs={filled} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function ExpandableDescriptionCell({
+  title,
+  value,
+  onChange,
+  placeholder = "Description",
+  readOnly = false,
+  ariaLabel,
+}) {
+  const fieldRef = useRef(null);
+  const [overflowing, setOverflowing] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const text = value || "";
+
+  useEffect(() => {
+    const el = fieldRef.current;
+    if (!el) return undefined;
+
+    const measure = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
+
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [text]);
+
+  return (
+    <>
+      <textarea
+        ref={fieldRef}
+        className={`input input--compact input--cell textarea textarea--description textarea--scrollable textarea--popup-desc ${readOnly ? "input--locked" : ""} ${overflowing ? "textarea--expandable" : ""}`}
+        placeholder={placeholder}
+        value={text}
+        rows={1}
+        readOnly={readOnly}
+        tabIndex={readOnly && !overflowing ? -1 : undefined}
+        title={overflowing ? "Click to view full text" : text || undefined}
+        aria-label={ariaLabel}
+        onChange={(e) => {
+          if (!readOnly) onChange(e.target.value);
+        }}
+        onFocus={() => {
+          // Editable cells always pop out to a full writing view; read-only cells
+          // only pop out once the collapsed text overflows (nothing more to show otherwise).
+          if (!readOnly || overflowing) setPopupOpen(true);
+        }}
+      />
+      {popupOpen && (
+        <DescriptionPopup
+          title={title}
+          value={text}
+          readOnly={readOnly}
+          onChange={onChange}
+          onClose={() => setPopupOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -675,6 +774,7 @@ function ItemTableRow({
   onPatch,
   canRemove,
   onRemove,
+  hasAnySpecs,
 }) {
   const pricing = calcLineFromUnitPrice({
     unitPrice: row.unitPrice,
@@ -705,16 +805,6 @@ function ItemTableRow({
           aria-label={`Item ID ${index + 1}`}
         />
       </td>
-      <td className="items-table__product">
-        <DescriptionField
-          className="textarea--product"
-          placeholder="Actual Product Name"
-          value={productValue}
-          error={Boolean(errors[`product_${index}`])}
-          aria-label={`Actual Product Name ${index + 1}`}
-          onChange={(product) => onPatch({ product })}
-        />
-      </td>
       <td className="items-table__qty">
         <input
           className="input input--compact input--cell input--cell-narrow input--locked"
@@ -725,20 +815,8 @@ function ItemTableRow({
           aria-label={`Required Qty ${index + 1}`}
         />
       </td>
-      <td className="items-table__avail-qty">
-        <input
-          className={`input input--compact input--cell input--cell-narrow ${errors[`availableQuantity_${index}`] ? "input--error" : ""}`}
-          type="number"
-          min="0"
-          step="1"
-          placeholder="0"
-          value={row.availableQuantity}
-          onChange={(e) => onPatch({ availableQuantity: e.target.value })}
-        />
-      </td>
       <td className="items-table__cat">
         <LockedTextInput
-          placeholder="Main Category"
           value={row.mainCategory ?? line.mainCategory ?? ""}
           ariaLabel={`Main Category row ${index + 1}`}
         />
@@ -746,46 +824,25 @@ function ItemTableRow({
       <td className="items-table__type">
         <LockedTextInput
           expandable
-          placeholder="Product Type"
           value={row.productType ?? line.productType ?? ""}
           ariaLabel={`Product Type row ${index + 1}`}
         />
       </td>
-      <td className="items-table__spec">
-        <LockedTextInput
-          expandable
-          placeholder="Spec 1"
-          value={row.spec1 ?? line.spec1 ?? ""}
-          ariaLabel={`Spec 1 row ${index + 1}`}
-        />
-      </td>
-      <td className="items-table__spec">
-        <LockedTextInput
-          expandable
-          placeholder="Spec 2"
-          value={row.spec2 ?? line.spec2 ?? ""}
-          ariaLabel={`Spec 2 row ${index + 1}`}
-        />
-      </td>
-      <td className="items-table__spec">
-        <LockedTextInput
-          expandable
-          placeholder="Spec 3"
-          value={row.spec3 ?? line.spec3 ?? ""}
-          ariaLabel={`Spec 3 row ${index + 1}`}
-        />
-      </td>
-      <td className="items-table__spec">
-        <LockedTextInput
-          expandable
-          placeholder="Spec 4"
-          value={row.spec4 ?? line.spec4 ?? ""}
-          ariaLabel={`Spec 4 row ${index + 1}`}
-        />
-      </td>
+      {hasAnySpecs && (
+        <td className="items-table__spec">
+          <ItemSpecsCell
+            specs={[
+              { label: "Spec 1", value: row.spec1 ?? line.spec1 ?? "" },
+              { label: "Spec 2", value: row.spec2 ?? line.spec2 ?? "" },
+              { label: "Spec 3", value: row.spec3 ?? line.spec3 ?? "" },
+              { label: "Spec 4", value: row.spec4 ?? line.spec4 ?? "" },
+            ]}
+            index={index}
+          />
+        </td>
+      )}
       <td className="items-table__brand">
         <LockedTextInput
-          placeholder="Brand"
           value={row.brand ?? line.brand ?? ""}
           ariaLabel={`Brand row ${index + 1}`}
         />
@@ -793,19 +850,18 @@ function ItemTableRow({
       <td className="items-table__part-number">
         <LockedTextInput
           expandable
-          placeholder="Part Number"
           value={row.partNumber ?? line.partNumber ?? ""}
           ariaLabel={`Part Number row ${index + 1}`}
         />
       </td>
       <td className="items-table__desc">
-        <DescriptionField
+        <ExpandableDescriptionCell
+          title="Product Description"
           placeholder="Product Description"
           value={row.description ?? line.description ?? ""}
-          scrollable
           readOnly
           onChange={() => {}}
-          aria-label={`Product Description ${index + 1}`}
+          ariaLabel={`Product Description ${index + 1}`}
         />
       </td>
       <td className="items-table__attachment">
@@ -825,6 +881,27 @@ function ItemTableRow({
           </span>
         )}
       </td>
+      <td className="items-table__product">
+        <DescriptionField
+          className="textarea--product"
+          placeholder="Actual Product Name"
+          value={productValue}
+          error={Boolean(errors[`product_${index}`])}
+          aria-label={`Actual Product Name ${index + 1}`}
+          onChange={(product) => onPatch({ product })}
+        />
+      </td>
+      <td className="items-table__avail-qty">
+        <input
+          className={`input input--compact input--cell input--cell-narrow ${errors[`availableQuantity_${index}`] ? "input--error" : ""}`}
+          type="number"
+          min="0"
+          step="1"
+          placeholder="0"
+          value={row.availableQuantity}
+          onChange={(e) => onPatch({ availableQuantity: e.target.value })}
+        />
+      </td>
       <td className="items-table__item-part-number">
         <input
           className="input input--compact input--cell"
@@ -836,12 +913,12 @@ function ItemTableRow({
         />
       </td>
       <td className="items-table__vendor-desc">
-        <DescriptionField
+        <ExpandableDescriptionCell
+          title="Product Description (Your Entry)"
           placeholder="Enter Product Description"
           value={row.vendorProductDescription ?? ""}
-          scrollable
           onChange={(vendorProductDescription) => onPatch({ vendorProductDescription })}
-          aria-label={`Product Description (vendor) ${index + 1}`}
+          ariaLabel={`Product Description (vendor) ${index + 1}`}
         />
       </td>
       <td className="items-table__delivery">
@@ -886,12 +963,12 @@ function ItemTableRow({
         />
       </td>
       <td className="items-table__remarks">
-        <DescriptionField
+        <ExpandableDescriptionCell
+          title="Remarks"
           placeholder="Notes"
           value={row.remarks ?? ""}
-          scrollable
           onChange={(remarks) => onPatch({ remarks })}
-          aria-label={`Remarks ${index + 1}`}
+          ariaLabel={`Remarks ${index + 1}`}
         />
       </td>
       <td className="items-table__remove">

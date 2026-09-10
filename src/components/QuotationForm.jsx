@@ -344,7 +344,7 @@ export function QuotationForm() {
         />
       )}
       <header className="page-hero">
-        <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div>
+        {/* <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div> */}
         <div className="brand">
           <div className="brand__logo">AT</div>
           <div>

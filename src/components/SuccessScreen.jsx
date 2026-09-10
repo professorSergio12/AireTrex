@@ -39,7 +39,7 @@ export function SuccessScreen({
               for <strong>{primaryProduct}</strong>
             </>
           )}{" "}
-          {/* has been received by the AiraTrex Sourcing Desk. */}
+          has been received.
         </p>
         <div className="success__ref">
           <div>

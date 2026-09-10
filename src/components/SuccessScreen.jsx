@@ -13,7 +13,7 @@ export function SuccessScreen({
   return (
     <div className="page">
       <header className="page-hero">
-        <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div>
+        {/* <div className="page-hero__eyebrow">AiraTrex Sourcing Desk</div> */}
         <div className="brand">
           <div className="brand__logo">AT</div>
           <div>
@@ -39,7 +39,7 @@ export function SuccessScreen({
               for <strong>{primaryProduct}</strong>
             </>
           )}{" "}
-          has been received by the AiraTrex Sourcing Desk.
+          {/* has been received by the AiraTrex Sourcing Desk. */}
         </p>
         <div className="success__ref">
           <div>

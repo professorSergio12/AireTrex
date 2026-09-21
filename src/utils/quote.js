@@ -13,11 +13,11 @@ export function todayIso() {
 }
 
 const TAX_BY_CURRENCY = {
-  INR: { defaultPct: 18, label: "GST" },
-  USD: { defaultPct: 0, label: "Sales Tax" },
-  EUR: { defaultPct: 20, label: "VAT" },
-  GBP: { defaultPct: 20, label: "VAT" },
-  AED: { defaultPct: 5, label: "VAT" },
+  INR: { defaultPct: 0, label: "Tax" },
+  USD: { defaultPct: 0, label: "Tax" },
+  EUR: { defaultPct: 0, label: "Tax" },
+  GBP: { defaultPct: 0, label: "Tax" },
+  AED: { defaultPct: 0, label: "Tax" },
 };
 
 function taxConfigForCurrency(currency) {
@@ -25,12 +25,12 @@ function taxConfigForCurrency(currency) {
   return TAX_BY_CURRENCY[key] || { defaultPct: 0, label: "Tax" };
 }
 
-/** Default tax % by currency (INR 18, USD 0, EUR/GBP 20, AED 5). */
+/** Default tax % — 0 for every currency; vendor enters it. */
 export function defaultGstForCurrency(currency) {
   return taxConfigForCurrency(currency).defaultPct;
 }
 
-/** UI label: GST / Sales Tax / VAT (without %). */
+/** UI label: always "Tax" (without %). */
 export function taxLabelForCurrency(currency) {
   return taxConfigForCurrency(currency).label;
 }

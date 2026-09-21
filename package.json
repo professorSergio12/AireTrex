@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:catalyst": "vite build --base=./ && node scripts/sync-catalyst-client.js",
+    "deploy:catalyst": "npm run build:catalyst && cd .. && catalyst deploy --only client",
     "lint": "eslint .",
     "preview": "vite preview"
   },

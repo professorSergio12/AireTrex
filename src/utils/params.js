@@ -262,36 +262,48 @@ export function enrichLineItemsWithCatalog(lineItems, catalog) {
     if (hitIdx >= 0) usedCatalogIdx.add(hitIdx);
 
     const rawLineDesc = line.description || "";
-    const hitDesc = normalizeSpacedText(hit.description || "");
-    const pick = (lineVal, hitVal) => {
-      const fromLine = String(lineVal ?? "").trim();
-      const fromHit = String(hitVal ?? "").trim();
-      return fromLine || fromHit || "";
-    };
-    const catalogProduct = String(hit.product || hit.productType || "").trim();
+    // Catalog fallbacks disabled: show only what the RFQ link sent; missing values stay empty.
+    // const hitDesc = normalizeSpacedText(hit.description || "");
+    // const pick = (lineVal, hitVal) => {
+    //   const fromLine = String(lineVal ?? "").trim();
+    //   const fromHit = String(hitVal ?? "").trim();
+    //   return fromLine || fromHit || "";
+    // };
+    // const catalogProduct = String(hit.product || hit.productType || "").trim();
+    const pick = (lineVal) => String(lineVal ?? "").trim();
 
     return {
       ...line,
-      product: line.product || catalogProduct || "",
-      quantity:
-        line.quantity === "" || line.quantity == null
-          ? hit.quantity ?? line.quantity
-          : line.quantity,
-      unit: line.unit || hit.unit || "",
+      // product: line.product || catalogProduct || "",
+      product: line.product || "",
+      // quantity:
+      //   line.quantity === "" || line.quantity == null
+      //     ? hit.quantity ?? line.quantity
+      //     : line.quantity,
+      quantity: line.quantity,
+      // unit: line.unit || hit.unit || "",
+      unit: line.unit || "",
       // Prefer Creator description when present (URL encoding often mangles it).
-      description: hitDesc || normalizeSpacedText(rawLineDesc) || "",
+      // description: hitDesc || normalizeSpacedText(rawLineDesc) || "",
+      description: normalizeSpacedText(rawLineDesc) || "",
       // Specs must reflect what the RFQ email/link actually sent, not whatever the
       // catalog record currently holds — never introduce a spec that wasn't already there.
       spec1: line.spec1 || "",
       spec2: line.spec2 || "",
       spec3: line.spec3 || "",
       spec4: line.spec4 || "",
-      mainCategory: pick(line.mainCategory, hit.mainCategory),
-      productType: pick(line.productType, hit.productType),
-      brand: pick(line.brand, hit.brand),
-      partNumber: pick(line.partNumber, hit.partNumber),
-      attachmentRef: pick(line.attachmentRef, hit.attachmentRef),
-      itemCode: pick(line.itemCode, hit.itemCode),
+      // mainCategory: pick(line.mainCategory, hit.mainCategory),
+      // productType: pick(line.productType, hit.productType),
+      // brand: pick(line.brand, hit.brand),
+      // partNumber: pick(line.partNumber, hit.partNumber),
+      // attachmentRef: pick(line.attachmentRef, hit.attachmentRef),
+      // itemCode: pick(line.itemCode, hit.itemCode),
+      mainCategory: pick(line.mainCategory),
+      productType: pick(line.productType),
+      brand: pick(line.brand),
+      partNumber: pick(line.partNumber),
+      attachmentRef: pick(line.attachmentRef),
+      itemCode: pick(line.itemCode),
     };
   });
 }

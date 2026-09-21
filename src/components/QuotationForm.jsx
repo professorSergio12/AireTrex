@@ -28,6 +28,11 @@ function productsEqual(a, b) {
   return normalizeProductName(a).toLowerCase() === normalizeProductName(b).toLowerCase();
 }
 
+function defaultAvailableQty(quantity) {
+  const q = String(quantity ?? "").trim();
+  return q !== "" && Number.isFinite(Number(q)) ? q : "";
+}
+
 function initialLineRows(lineItems, currency = "INR") {
   const gstDefault = String(defaultGstForCurrency(currency));
   return lineItems.map((line) => ({
@@ -43,7 +48,8 @@ function initialLineRows(lineItems, currency = "INR") {
     spec2: line.spec2 || "",
     spec3: line.spec3 || "",
     spec4: line.spec4 || "",
-    availableQuantity: "",
+    // Defaults to the required qty; vendor can change it.
+    availableQuantity: defaultAvailableQty(line.quantity),
     deliveryDate: "",
     unitPrice: "",
     gst: gstDefault,
@@ -204,8 +210,9 @@ export function QuotationForm() {
       if (!row.unitPrice || Number(row.unitPrice) <= 0) {
         e[`unitPrice_${i}`] = "Required";
       }
-      if (row.availableQuantity === "" || row.availableQuantity == null || Number(row.availableQuantity) < 0) {
-        e[`availableQuantity_${i}`] = "Required";
+      // Optional, but reject negatives when filled.
+      if (row.availableQuantity !== "" && row.availableQuantity != null && Number(row.availableQuantity) < 0) {
+        e[`availableQuantity_${i}`] = "Invalid";
       }
     });
     setErrors(e);
@@ -398,7 +405,15 @@ export function QuotationForm() {
         <section className="card">
           <h2 className="card__title">Quote Information</h2>
           <div className="grid grid-2">
-            <ReadOnlyField label="Quote Number (auto-generated)" value={form.quoteNumber} />
+            <Field label="Quote Number (auto-generated)">
+              <input
+                className="input"
+                type="text"
+                value={form.quoteNumber}
+                placeholder={autoQuoteNumber}
+                onChange={set("quoteNumber")}
+              />
+            </Field>
             <Field label="Quote Date">
               <input
                 className="input"
@@ -449,14 +464,16 @@ export function QuotationForm() {
                   <th className="items-table__part-number">Part Number</th>
                   <th className="items-table__desc">Product Description</th>
                   <th className="items-table__attachment">Attachment</th>
-                  <th className="items-table__product">Actual Product Name</th>
-                  <th className="items-table__avail-qty">
-                    Available Qty <span className="req-asterisk">*</span>
+                  <th className="items-table__product">
+                    Actual Product Name <span className="req-asterisk">*</span>
                   </th>
+                  <th className="items-table__avail-qty">Available Qty</th>
                   <th className="items-table__item-part-number">Item Part Number</th>
                   <th className="items-table__vendor-desc">Product Description</th>
                   <th className="items-table__delivery">Delivery Date</th>
-                  <th className="items-table__price">Unit Price *</th>
+                  <th className="items-table__price">
+                    Unit Price <span className="req-asterisk">*</span>
+                  </th>
                   <th className="items-table__gst">{taxFieldLabelForCurrency(form.currency)}</th>
                   <th className="items-table__total">Total</th>
                   <th className="items-table__remarks">Remarks</th>
@@ -992,7 +1009,7 @@ function qtyLabel(line) {
   return String(line.quantity);
 }
 
-function GrandTotalPreview({ currency, lineItems, lineRows, taxLabel = "GST" }) {
+function GrandTotalPreview({ currency, lineItems, lineRows, taxLabel = "Tax" }) {
   let subtotal = 0;
   let totalGst = 0;
 
